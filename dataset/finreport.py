@@ -1,12 +1,11 @@
-import tejapi
-tejapi.ApiConfig.api_key = "your_API_key"
-class financial_report(object):
+from . import querybase
+class financial_report(querybase.query_base):
     def __init__(self):
         self.accountData = None
         self.activeAccountData  = None	
     def inital_report(self):
-        self.accountData = tejapi.get('TWN/AIACC')
-        self.activeAccountData = tejapi.get('TWN/AINVFACC_INFO_C')
+        self.accountData = self.tejapi.get('TWN/AIACC')
+        self.activeAccountData = self.tejapi.get('TWN/AINVFACC_INFO_C')
         self.accountData['cname'] = self.accountData['cname'].str.replace('(','（').replace(')','）')
         self.accountData = self.accountData.sort_values(by=['cname'])
         self.accountData = self.accountData.drop_duplicates(subset=['code'],keep='last')
