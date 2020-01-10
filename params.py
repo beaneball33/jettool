@@ -4,7 +4,7 @@ import tejapi
 tejapi.ApiConfig.api_key = "your_API_key"
 
 back_length = 365
-query_length = 1
+query_length = 365
 coid_length_index = 300
 input_coids = None
 cash = 1000000
@@ -50,8 +50,8 @@ back_interval = []
 check_correlation = {}
 input_dates = base_date.split('-')
 sampledates = [0,pandas.Timestamp(int(input_dates[0]),int(input_dates[1]),int(input_dates[2])),0]
-sampledates[0] = sampledates[1] - pandas.DateOffset(years=int(back_length/365)) #回顧起日
-sampledates[2] = sampledates[1] - pandas.DateOffset(years=query_length) #最少6年樣本起日
+sampledates[0] = sampledates[1] - pandas.DateOffset(days=back_length) #回顧起日
+sampledates[2] = sampledates[1] - pandas.DateOffset(days=query_length) #最少6年樣本起日
 datastart_date = sampledates[2].strftime('%Y-%m-%d')
 current_zdate = sampledates[0]
 current_mdate = None

@@ -11,13 +11,16 @@ class listed_stock(querybase.query_base):
         query_column = [
             'coid','mkt','elist_day1','list_day2','list_day1',
             'tejind2_c','tejind3_c','tejind4_c','tejind5_c']
+            
         #define rename column, must remove after bugfixed
         rename_column = {'tejind2_c': 'TEJ產業名','tejind3_c': 'TEJ子產業名',
             'tejind4_c':'TSE新產業名','tejind5_c':'主計處產業名'}
+            
         #query all up-to-date listed stock 
         self.basic_info = self.tejapi.get('TWN/AIND',mkt=mkts,
             opts={'columns':query_column},
             paginate=True).rename(index=str, columns=rename_column)
+            
         #query all up-to-date delisted stock 
         self.basic_info_delist = self.tejapi.get('TWN/AIND',mkt='',
             list_day2={'gte':base_startdate},
@@ -47,7 +50,6 @@ class listed_stock(querybase.query_base):
         self.benchmark_roi['sdate'] = self.benchmark_roi['zdate'].astype(str).str[0:7].astype('datetime64')
         self.all_zdate_list = self.benchmark_roi['zdate'].unique()
         self.back_date_list = self.benchmark_roi['zdate'].unique()
-
 
     def get_dailydata(self,query_coids=None,base_startdate='2015-12-31',base_date='2019-12-31'):
         query_column = ['mdate','coid','close_d','open_d','high_d','low_d','roib','mv','tej_cdiv']

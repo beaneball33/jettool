@@ -4,8 +4,7 @@ import jettool.dataset
 from .dataset import finreport
 from .dataset import listedstock
 import os
-import tejapi
-tejapi.ApiConfig.api_key = "GDEy0mWAGqnI3EemCREGREZMcEVbnF"
+
 class financial_tool(finreport.financial_report,listedstock.listed_stock):
     def __init__(self):
         for name in params.__dict__:
