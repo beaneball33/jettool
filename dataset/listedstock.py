@@ -77,7 +77,12 @@ class listed_stock(querybase.query_base):
             self.prc_basedate['zdate'] =  self.prc_basedate['zdate'].astype(str).astype('datetime64')
             self.prc_basedate['報酬率'] = self.prc_basedate['報酬率'] .fillna(0)
         else:
-            self.prc_basedate = self.get_price_with_order(query_coids,base_startdate,base_date,query_column,rename_column)
+            self.prc_basedate = self.get_price_with_order(query_coids,
+                                                            base_startdate,
+                                                            base_date,
+                                                            query_column,
+                                                            rename_column
+                                                            )
 
     def get_price_with_order(self,query_coid,base_startdate,base_date,query_column,rename_column):
         this_roi_data = self.tejapi.get('TWN/APRCD',coid=query_coid,
@@ -87,3 +92,22 @@ class listed_stock(querybase.query_base):
         if 'zdate' in this_roi_data.columns:
             this_roi_data['zdate'] = this_roi_data['zdate'].astype(str).astype('datetime64')
         return this_roi_data
+        
+    def get_fxrate(self,query_code,query_length=None):
+        rate_data = self.benchmark_roi.loc[self.benchmark_roi['zdate']>=self.sampledates[2],['zdate']]
+        rate_data['TWD'] = 1
+        for code in query_code:
+            this_fx = code.split('@')
+            for this_code in this_fx:
+                if this_code not in rate_data.columns:
+                    fxrate_data = self.tejapi.get('GLOBAL/GCURR',
+                        mdate={'gte':base_startdate,'lte':base_date},
+                        coid=this_code,opts={"sort":"mdate.desc",'columns':['mdate','tntd2']},paginate=True).rename(
+                        index=str, columns={"mdate": "zdate","tntd2":this_code})
+                    fxrate_data['zdate'] = fxrate_data['zdate'].astype(str).astype('datetime64')
+                    rate_data = rate_data.merge(fxrate_data,on=['zdate'],how='left')
+                    rate_data[this_code] = rate_data[this_code].fillna(method='ffill')
+            if code not in rate_data.columns:
+                rate_data[code] = rate_data[this_fx[0]] / rate_data[this_fx[1]]
+        ans = ['zdate']+query_code
+        return rate_data.loc[:,ans]

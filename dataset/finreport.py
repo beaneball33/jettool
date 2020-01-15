@@ -1,4 +1,5 @@
 from . import querybase
+import pandas
 class financial_report(querybase.query_base):
     def __init__(self):
         self.accountData = None
@@ -11,8 +12,6 @@ class financial_report(querybase.query_base):
         self.accountData = self.accountData.sort_values(by=['cname'])
         self.accountData = self.accountData.drop_duplicates(subset=['code'],keep='last')
     def get_acc_code(self,acc_name=[],active_view=False):
-        if self.accountData is None:
-            self.inital_report()
         ans = []
         acc_name_set = set(acc_name)
         acc_name = list(acc_name_set)
@@ -33,7 +32,7 @@ class financial_report(querybase.query_base):
                     else:
                         print(cname+':not find')
         return ans
-    def get_report(self,query_code,query_length,query_coid=None,rename_cols=True):
+    def get_report(self,query_code,query_coid=None,rename_cols=True):
         print('查詢財務指標')
         self.acc_code = query_code
         target_name = [['TWN/AIFINQA','TWN/AIFINQ']]
@@ -43,17 +42,17 @@ class financial_report(querybase.query_base):
         if len(query_coid)>0:
 
             #嘗試查詢報表封面
-            fin_data = tejapi.get(target_name[0][0],
+            fin_data = self.tejapi.get(target_name[0][0],
                 coid=query_coid,a0003={'gte':self.datastart_date,'lte':self.current_zdate},
-                opts={"sort":"mdate.desc",'columns':['coid','mdate','a0003']},paginate=True)
-                .rename(index=str, columns={"a0003": "zdate"})
+                opts={"sort":"mdate.desc",'columns':['coid','mdate','a0003']},paginate=True).rename(
+                index=str, columns={"a0003": "zdate"})
             actual_ciod = fin_data['coid'].unique().tolist()
             print('success query:'+str(len(actual_ciod)))
             if len(fin_data)>0:
                 #如果有查到，代表是這個表
                 #查詢報表
                 query_column = ['coid','mdate'] + query_code
-                fin_report  = tejapi.get(target_name[0][1],coid=actual_ciod,
+                fin_report  = self.tejapi.get(target_name[0][1],coid=actual_ciod,
                     mdate={'gte':self.datastart_date,'lte':self.current_zdate},
                     opts={"sort":"mdate.desc",'columns':query_column,"pivot":True},paginate=True)
 
@@ -61,7 +60,7 @@ class financial_report(querybase.query_base):
                 fin_data['mdate'] =  fin_data['mdate'].astype(str).astype('datetime64')
                 fin_data['zdate'] =  fin_data['zdate'].astype(str).astype('datetime64')
                 #處理調整合理的公告日，檢查用
-                fin_data['ndate'] = fin_data['mdate'] + pd.DateOffset(months=6)
+                fin_data['ndate'] = fin_data['mdate'] + pandas.DateOffset(months=6)
 
         if rename_cols is True:
             for this_code in query_code:
@@ -74,21 +73,21 @@ class financial_report(querybase.query_base):
         print('成功查詢會計家數:'+str(len(fin_data['coid'].unique())))
         return  fin_data        
 
-    def get_active_report(self,query_code,query_length,query_coid=None):
+    def get_active_report(self,query_code,query_coid=None):
         self.acc_code = query_code
 
         if query_coid is None:
             query_coid = self.input_coids.copy()
         query_column = ['coid','mdate','fin_od']+query_code
 
-        findata_cover = tejapi.get('TWN/AINVFINQA',coid=query_coid,
+        findata_cover = self.tejapi.get('TWN/AINVFINQA',coid=query_coid,
             a_dd={'gte':self.datastart_date,'lte':self.current_zdate},
-            opts={'columns':['coid','mdate','fin_od','a_dd']}, paginate=True)
-            .rename(index=str, columns={"a_dd": "zdate"})
+            opts={'columns':['coid','mdate','fin_od','a_dd']}, paginate=True).rename(
+            index=str, columns={"a_dd": "zdate"})
             
         actual_ciod = findata_cover['coid'].unique().tolist()
         
-        findata_all = tejapi.get('TWN/AINVFINQ',coid=actual_ciod,
+        findata_all = self.tejapi.get('TWN/AINVFINQ',coid=actual_ciod,
             mdate={'gte':findata_cover['mdate'].min(),'lte':findata_cover['mdate'].max()},
             opts={'columns':query_column,"pivot":True}, paginate=True)
             
@@ -108,7 +107,7 @@ class financial_report(querybase.query_base):
         
         if len(not_active_list)>0 and len(query_transfet_list)>0:
             findata_not_active = self.get_report(query_code=query_transfet_list,
-                query_length=query_length,query_coid=not_active_list,rename_cols=False)
+                query_coid=not_active_list,rename_cols=False)
 
             findata_not_active = findata_not_active.fillna(0)
             for i in range(0,len(query_transfet_list)):
@@ -132,17 +131,18 @@ class financial_report(querybase.query_base):
         print('成功查詢會計家數:'+str(len(findata_all['coid'].unique())))
         return findata_all
         
-    def do_query(self,acc_code,query_length = None,active_view=False):
-        acc_code_set = set(acc_code)
-        acc_code = list(acc_code_set)
+    def do_query(self,query_code,query_length = 1,active_view=False):
+        acc_code_set = set(query_code)
+        query_code = list(acc_code_set)
         fx_list = []
-        for codes in acc_code:
+        for codes in query_code:
             if '@' in codes:
                 fx_list = fx_list + [codes]
-                acc_code.remove(codes)
+                query_code.remove(codes)
 
         self.query_length = query_length
-      
+        self.datastart_date = self.current_zdate - pandas.DateOffset(days=(query_length+1)) #最少6年樣本起日
+        self.datastart_date = self.datastart_date.strftime('%Y-%m-%d')
         #查詢績效指標報酬率    
         print('準備資料股數:'+str(len(self.input_coids))) 
         if len(self.input_coids)>0:
@@ -150,13 +150,25 @@ class financial_report(querybase.query_base):
             #查詢季報
             if active_view is False:
                 self.active_view = False
-                self.findata_all = self.get_report(acc_code,query_length)                
+                self.findata_all = self.get_report(query_code=query_code)                
             else:
                 self.active_view = True
-                self.findata_all = self.get_active_report(acc_code,query_length)
+                self.findata_all = self.get_active_report(query_code=query_code)
         self.fxrate_attr = {}
         if len(fx_list)>0:
             print('查詢匯率')
             self.rate_data = self.get_fxrate(fx_list,query_length)
-        print('ok')
-        self.show_indicators() 
+    def get_by_word(self,keyword='損益',active_view=False):
+        if active_view is False:
+            ans = self.accountData.loc[self.accountData['cname'].str.contains(keyword),'cname'].reset_index(drop=True)
+        else:
+            ans = self.activeAccountData.loc[self.activeAccountData['cdesc'].str.contains(keyword),'cdesc'].reset_index(drop=True)
+        return ans
+    def get_by_cgrp(self,cgrp=['損益表'],active_view=False):
+        if active_view is False:
+            ans = self.accountData.loc[self.accountData['cgrp'].isin(cgrp),'cname'].reset_index(drop=True)
+        else:
+            cgrp_list = {'非經常性損益':'X','比率':'R','損益表':'I','現金流量表':'C','資產負債表':'B','比率計算':'Z'}
+            cgrp_code = [cgrp_list.get(cgrp[k]) for k in range(0,len(cgrp))]
+            ans = self.activeAccountData.loc[self.activeAccountData['acct_type'].isin(cgrp_code),'cdesc'].reset_index(drop=True)
+        return ans
