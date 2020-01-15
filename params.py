@@ -53,7 +53,7 @@ sampledates = [0,pandas.Timestamp(int(input_dates[0]),int(input_dates[1]),int(in
 sampledates[0] = sampledates[1] - pandas.DateOffset(days=back_length) #回顧起日
 sampledates[2] = sampledates[1] - pandas.DateOffset(days=query_length) #最少6年樣本起日
 datastart_date = sampledates[2].strftime('%Y-%m-%d')
-current_zdate = sampledates[1]
+current_zdate = sampledates[1].strftime('%Y-%m-%d')
 current_mdate = None
 listed_coids = []
 sampledates = sampledates

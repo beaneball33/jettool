@@ -33,7 +33,6 @@ class financial_report(querybase.query_base):
                         print(cname+':not find')
         return ans
     def get_report(self,query_code,query_coid=None,rename_cols=True):
-        print('查詢財務指標')
         self.acc_code = query_code
         target_name = [['TWN/AIFINQA','TWN/AIFINQ']]
         if query_coid is None:
@@ -47,7 +46,6 @@ class financial_report(querybase.query_base):
                 opts={"sort":"mdate.desc",'columns':['coid','mdate','a0003']},paginate=True).rename(
                 index=str, columns={"a0003": "zdate"})
             actual_ciod = fin_data['coid'].unique().tolist()
-            print('success query:'+str(len(actual_ciod)))
             if len(fin_data)>0:
                 #如果有查到，代表是這個表
                 #查詢報表
@@ -141,10 +139,9 @@ class financial_report(querybase.query_base):
                 query_code.remove(codes)
 
         self.query_length = query_length
-        self.datastart_date = self.current_zdate - pandas.DateOffset(days=(query_length+1)) #最少6年樣本起日
+        self.datastart_date = pandas.Timestamp(self.current_zdate) - pandas.DateOffset(days=(query_length+1)) #最少6年樣本起日
         self.datastart_date = self.datastart_date.strftime('%Y-%m-%d')
         #查詢績效指標報酬率    
-        print('準備資料股數:'+str(len(self.input_coids))) 
         if len(self.input_coids)>0:
             #先查詢財報公告日，要已公告日為主要日期
             #查詢季報
