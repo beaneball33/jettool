@@ -1,5 +1,5 @@
 from . import querybase
-
+import pandas
 
 class listed_stock(querybase.query_base):
     def __init__(self):
@@ -28,6 +28,8 @@ class listed_stock(querybase.query_base):
             paginate=True).rename(index=str, columns=rename_column)
         #always makesure date format is datetime64 without [ns]
         self.basic_info = self.basic_info.append(self.basic_info_delist,sort=False)
+        self.basic_info['list_day2'] = pandas.to_datetime(self.basic_info['list_day2'].values,utc=True)
+        self.basic_info['list_day2'] = self.basic_info['list_day2'].astype(str).astype('datetime64')
         self.basic_info['list_day1'] = self.basic_info['list_day1'].astype(str).astype('datetime64')
         self.basic_info['elist_day1'] = self.basic_info['elist_day1'].astype(str).astype('datetime64')
         #ANPRCSTD has not 'F' listed stock 

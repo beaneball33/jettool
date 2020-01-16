@@ -13,13 +13,14 @@ class query_base(object):
         listed_coids = self.basic_info.loc[self.basic_info['list_day1']<=self.current_zdate,'coid'].values.tolist()
         self.current_coids = df.loc[(df['zdate']==self.current_zdate),['zdate','coid']]
         self.listed_coids = df.loc[(df['zdate']==self.current_zdate)&(df['coid'].isin(listed_coids)),'coid'].values.tolist()    
-        
     def get_activedate_data(self,window,column_names,peer_future=False,base_date=None,base_mdate=None,clue_length=None,keep='first'):
         current_data = None
         column_names = ['zdate','mdate','coid']+column_names
         df = self.all_date_data
-        if self.all_date_data is None:
-            df = self.findata_all if self.prc_basedate is None else self.prc_basedate
+        if self.all_date_data is None and self.prc_basedate is None:
+            df = self.findata_all
+        elif self.findata_all is None:
+            df = self.prc_basedate
         if 'q' not in window:
             if clue_length is None:
                 clue_length = 0

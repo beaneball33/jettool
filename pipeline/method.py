@@ -7,11 +7,11 @@ class method_base(object):
         if df is None:
             self.portfolio_pv = np.nan_to_num(self.simple_roi_data.loc[self.simple_roi_data['pname']=='portfolio','present value'].values)
             df = np.array(self.portfolio_pv)
-        #³Ì¤j¦^ºM²v
-        i = np.argmax((np.maximum.accumulate(df) - df) / np.maximum.accumulate(df))  # µ²§ô¦ì¸m
+        #æœ€å¤§å›æ’¤ç‡
+        i = np.argmax((np.maximum.accumulate(df) - df) / np.maximum.accumulate(df))  # çµæŸä½ç½®
         if i == 0:
             return 0
-        j = np.argmax(df[:i])  # ¶}©l¦ì¸m
+        j = np.argmax(df[:i])  # é–‹å§‹ä½ç½®
         return ((df[j] - df[i]) / (df[j]))
     def reset_strategy(self,reset_date=None):
         print('reset')
@@ -47,7 +47,7 @@ class method_base(object):
                 t_test_result.pop(0)
                 t_test_result.columns=x_names
                 t_test_result.index=['coef','p-value']
-                #®Ú¾Úp-value±Æ§Ç¥H«K«á­±pop
+                #æ ¹æ“šp-valueæ’åºä»¥ä¾¿å¾Œé¢pop
                 p_df=pd.DataFrame(t_test_result.T['p-value'].sort_values())
                 p_df_over_alpha=p_df[p_df['p-value']>(alpha_rate/100)]
                 no_significant_number=len(p_df_over_alpha)
@@ -57,7 +57,7 @@ class method_base(object):
                     x_names.remove(variable)
                     print('removing variable:'+variable)
                 elif len(x_names) == 0:
-                    #Åı¨t²Î¶]¥Xfamamacbeth_outcomeµ¹«á­±¤èªk¥Î ¦ı¬O«o¬OªÅªº
+                    #è®“ç³»çµ±è·‘å‡ºfamamacbeth_outcomeçµ¦å¾Œé¢æ–¹æ³•ç”¨ ä½†æ˜¯å»æ˜¯ç©ºçš„
                     print('no effective variable')
                     t_test_result = None
                     break
@@ -75,16 +75,16 @@ class method_base(object):
         else:
             score_columns = []
             for i in range(len(factor)):
-                sub_df[factor[i]+'_±o¤À']=sub_df[factor[i]]*direction[i]
-                score_columns = score_columns + [factor[i]+'_±o¤À']
-            if '¥«­È' not in score_columns:
-                score_columns = score_columns + ['¥«­È']
+                sub_df[factor[i]+'_å¾—åˆ†']=sub_df[factor[i]]*direction[i]
+                score_columns = score_columns + [factor[i]+'_å¾—åˆ†']
+            if 'å¸‚å€¼' not in score_columns:
+                score_columns = score_columns + ['å¸‚å€¼']
             rank_data=sub_df.groupby('coid')[score_columns].mean().rank()
-            filter=rank_data[rank_data['¥«­È']>0].drop(columns=['¥«­È'])
+            filter=rank_data[rank_data['å¸‚å€¼']>0].drop(columns=['å¸‚å€¼'])
             result=filter.sum(axis=1).sort_values().rank(method='max')[:int(len(filter)*rank_above*0.01)+1]
             result_df = pd.DataFrame(result).rename(columns={0: 'temp'})
         return result_df
-    def make_famamacbethmodel(self,col_name='³ø¹S²v',check_index=['¥«­È','²{ª÷ªÑ§Q²v'],window='12m',alpha_rate=5,reset_list='01',keep=None,target_name=None,peer_future=False):
+    def make_famamacbethmodel(self,col_name='å ±é…¬ç‡',check_index=['å¸‚å€¼','ç¾é‡‘è‚¡åˆ©ç‡'],window='12m',alpha_rate=5,reset_list='01',keep=None,target_name=None,peer_future=False):
         t1 = time.time()
         ans_val = np.nan
         target_name = self.check_function_input(target_name)
@@ -94,8 +94,8 @@ class method_base(object):
         actual_reset_list = self.manage_resetlist(reset_list)
         self.retrain_model[target_name] = self.check_resetdate(actual_reset_list)
         if self.retrain_model.get(target_name) is True:
-            #­Yfamamacbeth_outcome¨S¦³¶¶§Q²£¥Í©Î¤£¦s¦b
-            print('­«·s¶i¦æfama macbeth¦ô­p')
+            #è‹¥famamacbeth_outcomeæ²’æœ‰é †åˆ©ç”¢ç”Ÿæˆ–ä¸å­˜åœ¨
+            print('é‡æ–°é€²è¡Œfama macbethä¼°è¨ˆ')
             input_col_name = [col_name]+check_index
             this_date_data, this_window_type, window = self.get_activedate_data(window,clue_length=0,column_names=input_col_name,peer_future=peer_future)
             this_date_data = this_date_data.dropna(subset=input_col_name)
@@ -108,11 +108,11 @@ class method_base(object):
             if len(this_date_data)>=len(self.input_coids)*window:
                 t_test_result = self.fama_macbeth_test(this_date_data,alpha_rate,y_name=col_name,x_names=check_index)
                 if t_test_result is None:
-                    print('fama_macbeth_testµL¦³®Ä¦]¤l')
+                    print('fama_macbeth_testç„¡æœ‰æ•ˆå› å­')
                 else:
                     self.trained_model[target_name] = t_test_result
                     print(t_test_result)
-                    print('¼Ë¥»¼Æ'+str(len(this_date_data))+'/'+str(len(self.input_coids)*window)+' §¹¦¨¦ô­p ¦]¤l¼Æ:'+str(len(t_test_result.columns)))
+                    print('æ¨£æœ¬æ•¸'+str(len(this_date_data))+'/'+str(len(self.input_coids)*window)+' å®Œæˆä¼°è¨ˆ å› å­æ•¸:'+str(len(t_test_result.columns)))
                     fama_factors_coef = str(t_test_result.loc['coef',:].values[0])
                     fama_factors_name = str(t_test_result.columns.tolist()[0])
                     for name_index in range(1,len(t_test_result.columns)):
@@ -120,7 +120,7 @@ class method_base(object):
                         fama_factors_name = fama_factors_name+'_'+str(t_test_result.columns.tolist()[name_index])
                     ans_val = fama_factors_name+'#'+fama_factors_coef
             else:
-                print('¼Ë¥»¼Æ'+str(len(this_date_data))+'/'+str(len(self.input_coids)*window)+' fama_macbeth_test¼Ë¥»¼Æ¤£¨¬')
+                print('æ¨£æœ¬æ•¸'+str(len(this_date_data))+'/'+str(len(self.input_coids)*window)+' fama_macbeth_testæ¨£æœ¬æ•¸ä¸è¶³')
         all_coid_data = self.current_coids.copy()
         all_coid_data['zdate'] = self.current_zdate
         all_coid_data['temp'] = ans_val
@@ -175,7 +175,7 @@ class method_base(object):
         result_df.loc[result_df[group_name]==group_list[len(group_list)-1],'temp'] = max_group
         return result_df.loc[:,[check_index,'temp']]
     def check_resetdate(self,actual_reset_list):
-        #ÀË¬d¡A­Y­«¸m¤é´Á²Å¦X¹ê»Ú¥æ©ö¤é¡A¥B»İ»P¸Ó¥æ©ö¤é¬Û¦P
+        #æª¢æŸ¥ï¼Œè‹¥é‡ç½®æ—¥æœŸç¬¦åˆå¯¦éš›äº¤æ˜“æ—¥ï¼Œä¸”éœ€èˆ‡è©²äº¤æ˜“æ—¥ç›¸åŒ
         ans = False
         for d_i in range(0,len(actual_reset_list)):
             #print([pd.to_datetime(self.current_zdate).strftime('%Y-%m-%d'),actual_reset_list[d_i],reset_list_y[d_i]])
@@ -204,7 +204,7 @@ class method_base(object):
         reset_list_y = list(set(reset_list_y))
         actual_reset_list = [self.cal_zdate(base_date=self.check_available_date(reset_list_y[d_i]),jump_length=-1,jump_kind='D') for d_i in range(0,len(reset_list_y))]        
         return actual_reset_list  
-    def abnormal_selection(self,group_data=None,check_index='³ø¹S²v',group_name='TEJ¤l²£·~¦W',check_type=True,method='positive',window='12m',alpha_rate=5,keep=None,reset_list=None):
+    def abnormal_selection(self,group_data=None,check_index='å ±é…¬ç‡',group_name='TEJå­ç”¢æ¥­å',check_type=True,method='positive',window='12m',alpha_rate=5,keep=None,reset_list=None):
         run_this_date = True
         if reset_list is not None:
             actual_reset_list = self.manage_resetlist(reset_list)
@@ -257,7 +257,7 @@ class method_base(object):
         else:
             ans = self.return_previous_holding()
         return ans
-    def group_selection(self,group_data=None,check_index='³ø¹S²v',ascending=False,group_name='TEJ¤l²£·~¦W',window='12m',keep=None,choose_above=[0,10],reset_list=None):
+    def group_selection(self,group_data=None,check_index='å ±é…¬ç‡',ascending=False,group_name='TEJå­ç”¢æ¥­å',window='12m',keep=None,choose_above=[0,10],reset_list=None):
         if group_data is None:
             input_col_name=[group_name,check_index]
             group_data , this_window_type, window = self.get_activedate_data(window=window,clue_length=0,column_names=input_col_name)
@@ -295,7 +295,7 @@ class method_base(object):
         else:
             this_hold_data = False
         return this_hold_data
-    def choose_setting(self,check_index='ÁÊ¤J',reset_list='01'):
+    def choose_setting(self,check_index='è³¼å…¥',reset_list='01'):
         run_this_date = True
         if reset_list is not None:
             actual_reset_list = self.manage_resetlist(reset_list)
@@ -312,27 +312,27 @@ class method_base(object):
                 rank_data = False
         return rank_data
     def equal_pv(self):
-        #¥»¤èªk¥Î¨Ó²£¥Í§ë¸ê²{­È¬Û¦Pªº«ùªÑ¤è¦¡
-        #¦b«ùªÑ®a¼Æ¤£ÅÜ¤U¡Aºû«ù¬Û¦P«ùªÑ¼Æ¡A²§°Ê¤§¤½¥q¡A§ë¸ê²{­È«h»P¨ä¥L¦UÀÉ¥­§¡­È¬Û¦P
-        this_coid = self.data.loc[(self.data['ÁÊ¤J']==True)&(self.data['coid'].isin(self.listed_coids)),'coid'].values
-        this_closed = self.data.loc[(self.data['ÁÊ¤J']==True)&(self.data['coid'].isin(self.listed_coids)),'ªÑ»ù'].values
+        #æœ¬æ–¹æ³•ç”¨ä¾†ç”¢ç”ŸæŠ•è³‡ç¾å€¼ç›¸åŒçš„æŒè‚¡æ–¹å¼
+        #åœ¨æŒè‚¡å®¶æ•¸ä¸è®Šä¸‹ï¼Œç¶­æŒç›¸åŒæŒè‚¡æ•¸ï¼Œç•°å‹•ä¹‹å…¬å¸ï¼ŒæŠ•è³‡ç¾å€¼å‰‡èˆ‡å…¶ä»–å„æª”å¹³å‡å€¼ç›¸åŒ
+        this_coid = self.data.loc[(self.data['è³¼å…¥']==True)&(self.data['coid'].isin(self.listed_coids)),'coid'].values
+        this_closed = self.data.loc[(self.data['è³¼å…¥']==True)&(self.data['coid'].isin(self.listed_coids)),'è‚¡åƒ¹'].values
         self.hold_coids = [this_coid.tolist()] + self.hold_coids
         if len(self.hold_coids)>1:
             not_same = False
             for i in range(0,len(self.hold_coids[1])):
                 if self.hold_coids[1][i] not in self.hold_coids[0]:
-                #ÀË¬d³Ì·s¤@¤ÑªÑ²¼¦W³æ¦³µL§ïÅÜ
+                #æª¢æŸ¥æœ€æ–°ä¸€å¤©è‚¡ç¥¨åå–®æœ‰ç„¡æ”¹è®Š
                     not_same = True
                     break
-            #²Ä¤@¤Ñ¥H«á¡A­n¶i¦æÀË¬d¤ñ¹ï
+            #ç¬¬ä¸€å¤©ä»¥å¾Œï¼Œè¦é€²è¡Œæª¢æŸ¥æ¯”å°
             if len(self.hold_coids[0]) == len(self.hold_coids[1]) and not_same is False:
 
-                #«ùªÑ¤£ÅÜ¡A«hªÑ¼Æ¤£ÅÜ
+                #æŒè‚¡ä¸è®Šï¼Œå‰‡è‚¡æ•¸ä¸è®Š
                 this_hold_units = self.hold_unit[0]
                 this_coid = self.hold_coids[1]
                 self.hold_unit = [this_hold_units] + self.hold_unit
             else:
-                #«ùªÑ§ïÅÜ¡A­«½ÕÅv­«
+                #æŒè‚¡æ”¹è®Šï¼Œé‡èª¿æ¬Šé‡
 
                 if len(this_coid)>0:
                     unit_pv = self.cash/len(this_coid)
@@ -343,12 +343,12 @@ class method_base(object):
                     self.hold_unit = [this_hold_units]+ self.hold_unit
         else:
             if len(this_coid)>0:
-                #­n¦³ÁÊ¤J¤~­pºâ
+                #è¦æœ‰è³¼å…¥æ‰è¨ˆç®—
                 unit_pv = self.cash/len(this_coid)
                 this_hold_units = np.floor(unit_pv/this_closed)
                 self.hold_unit = [this_hold_units.tolist()]
             else:
-                this_hold_units = self.data.loc[self.data['ÁÊ¤J']==True,'ÁÊ¤J'].astype(float).values
+                this_hold_units = self.data.loc[self.data['è³¼å…¥']==True,'è³¼å…¥'].astype(float).values
                 self.hold_unit = [this_hold_units.tolist()]
         temp_ans = pd.DataFrame(this_hold_units,columns=['temp'])
         temp_ans['coid'] = this_coid
@@ -425,7 +425,7 @@ class method_base(object):
         elapsed_time = t2-t1
         #print('cost'+str(elapsed_time))
         return ans
-    def calculate_growthrate(self,check_index='³ø¹S²v',window='1d',fix_date=None,method='arithmetic',target_name=None,sync=True,peer_future=False):
+    def calculate_growthrate(self,check_index='å ±é…¬ç‡',window='1d',fix_date=None,method='arithmetic',target_name=None,sync=True,peer_future=False):
         t1 = time.time()
         edit_cols= self.confirm_checkindex(check_index1=check_index,window=window)
         check_index = edit_cols[0]
@@ -435,7 +435,7 @@ class method_base(object):
             t2 = time.time()
             elapsed_time = t2-t1
             return ans
-        #¦pªG¤£¥]§t´Áªì¨º´ÁªºÅÜ¤Æ²v «hsync¬°false
+        #å¦‚æœä¸åŒ…å«æœŸåˆé‚£æœŸçš„è®ŠåŒ–ç‡ å‰‡syncç‚ºfalse
         clue = 1 if sync is True else 0
         if fix_date is not None:
             jumps = 0 if peer_future is False else -1
@@ -444,11 +444,11 @@ class method_base(object):
         else:
             this_date_data, this_window_type, window = self.get_activedate_data(window,clue_length=clue,column_names=[check_index],peer_future=peer_future)
         roib_list = this_date_data[check_index].values
-        #¹w¯d­pºâ±±¨î ²{¦bªº³q¥Îªk¤ñ¸û¨S®Ä²v
+        #é ç•™è¨ˆç®—æ§åˆ¶ ç¾åœ¨çš„é€šç”¨æ³•æ¯”è¼ƒæ²’æ•ˆç‡
         col_type = None
         if col_type is None:
             rolling_window = len(this_date_data['zdate'].unique())
-            #¯S®íªººâªk ºu°Ê­pºâ¤¤¶¡¨C´Áªºµ²ªG
+            #ç‰¹æ®Šçš„ç®—æ³• æ»¾å‹•è¨ˆç®—ä¸­é–“æ¯æœŸçš„çµæœ
             roib_y0 = roib_list[1:len(roib_list)]
             roib_y1 = roib_list[0:len(roib_list)-1]
             if method is 'arithmetic':
@@ -467,7 +467,7 @@ class method_base(object):
         elapsed_time = t2-t1
        #print('cost'+str(elapsed_time))
         return ans
-    def calculate_volatility(self,check_index='³ø¹S²v',window='3M',col_type='SMA',target_name=None):
+    def calculate_volatility(self,check_index='å ±é…¬ç‡',window='3M',col_type='SMA',target_name=None):
         t1 = time.time()
         edit_cols= self.confirm_checkindex(check_index1=check_index,window=window)
         check_index = edit_cols[0]
@@ -503,7 +503,7 @@ class method_base(object):
         input_col_name = [check_index]
         this_date_data, this_window_type, window = self.get_activedate_data(window,column_names=input_col_name)
         all_date_data = pd.DataFrame(columns=['zdate','coid','temp'])
-        #³oÃä­n¥[¤W¤ÀÃş²M³æ²£¥Í
+        #é€™é‚Šè¦åŠ ä¸Šåˆ†é¡æ¸…å–®ç”¢ç”Ÿ
         if category is None:
             check_coid_category_list = [self.input_coids]
         else:
@@ -547,7 +547,7 @@ class method_base(object):
         this_date_data, this_window_type, window = self.get_activedate_data(window,column_names=input_col_name)
         all_coid_data = pd.DataFrame(columns=['zdate','coid','temp'])
         #print(this_date_data[this_date_data['coid']=='2330'])
-        #³oÃä­n¥[¤W¤ÀÃş²M³æ²£¥Í
+        #é€™é‚Šè¦åŠ ä¸Šåˆ†é¡æ¸…å–®ç”¢ç”Ÿ
         if category is None:
             check_coid_category_list = [self.input_coids]
         else:
@@ -597,7 +597,7 @@ class method_base(object):
             #year_start = self.sampledates[1] - pd.DateOffset(years=window)
             #year_end = sampledates[1]
         check_data = []
-            #­pºâ
+            #è¨ˆç®—
 
         if col_kind == 'mean':
             this_date_data['temp'] = (this_date_data[check_index].rolling(window=window).mean())
@@ -640,7 +640,7 @@ class method_base(object):
             base_zdate = self.cal_zdate(base_date=None,jump_length=jump_length,jump_kind=jump_kind,fix_date=fix_date)
             this_date_data, this_window_type, window = self.get_activedate_data(window='1d',clue_length=clue,column_names=[check_index],peer_future=False,base_date=base_zdate)
 
-            #¥h±¼¦h¾l¸ê®Æ¡A¦]¬°¥u¦³³Ì·s¤@µ§¬O¦³¥Îªº
+            #å»æ‰å¤šé¤˜è³‡æ–™ï¼Œå› ç‚ºåªæœ‰æœ€æ–°ä¸€ç­†æ˜¯æœ‰ç”¨çš„
         this_date_data['temp'] = this_date_data[check_index]
         this_date_data['zdate'] = self.current_zdate
         this_date_data = this_date_data.loc[:,['coid','mdate','zdate','temp']].drop_duplicates(subset=['coid','zdate'],keep='last')
@@ -669,10 +669,10 @@ class method_base(object):
             if 'Series'  in type(check_index1).__name__:
                 this_col_name = check_index1.name
                 if id(self.data[this_col_name]) == id(check_index1):
-                    #°²¦pª«¥óªºseries id»P«ü©w¦WºÙªºid¬Û¦P
+                    #å‡å¦‚ç‰©ä»¶çš„series idèˆ‡æŒ‡å®šåç¨±çš„idç›¸åŒ
                     check_index1 = this_col_name
                 else:
-                    #¤£¦s¦bªºÄæ¦ì¦WºÙ
+                    #ä¸å­˜åœ¨çš„æ¬„ä½åç¨±
                     print('invalid column name in dataframe:'+str(this_col_name))
                     sys.exit()
             elif 'int' in type(check_index1).__name__ or 'float' in type(check_index1).__name__:
@@ -687,10 +687,10 @@ class method_base(object):
                 if 'Series'  in type(check_index2).__name__:
                     this_col_name = check_index2.name
                     if id(self.data[this_col_name]) == id(check_index2):
-                        #°²¦pª«¥óªºseries id»P«ü©w¦WºÙªºid¬Û¦P
+                        #å‡å¦‚ç‰©ä»¶çš„series idèˆ‡æŒ‡å®šåç¨±çš„idç›¸åŒ
                          check_index2 = this_col_name
                     else:
-                        #¤£¦s¦bªºÄæ¦ì¦WºÙ
+                        #ä¸å­˜åœ¨çš„æ¬„ä½åç¨±
                         print('invalid column name in dataframe:'+str(this_col_name))
                         sys.exit()
                 elif 'int' in type(check_index2).__name__ or 'float' in type(check_index2).__name__:
@@ -702,7 +702,7 @@ class method_base(object):
             ans.append(check_index2)
         return ans
     def check_function_input(self,target_name,trace_layer=2):
-        #¥Î¨Ó¬d¸ß¤W¨â¼h¼¶¼gªºtarget_nameªº
+        #ç”¨ä¾†æŸ¥è©¢ä¸Šå…©å±¤æ’°å¯«çš„target_nameçš„
         if target_name is None:
             current_commands= traceback.format_stack()
             current_trace = current_commands[len(current_commands)-(1+trace_layer)].split('\n')
@@ -712,7 +712,7 @@ class method_base(object):
                 right_name = first_phraes.split("tejtool.data['")[1]
                 target_name = right_name.split("']")[0]
         return target_name
-    #µ¹­pºâ¤½¦¡¥Î¡A«ö·Óµ¹­qwindow¨ú¥X¸ê®Æ¥H«K°µ­pºâ
+    #çµ¦è¨ˆç®—å…¬å¼ç”¨ï¼ŒæŒ‰ç…§çµ¦è¨‚windowå–å‡ºè³‡æ–™ä»¥ä¾¿åšè¨ˆç®—
     def check_data_available(self,target_name):
         ans = False
         if target_name in self.all_date_data.columns:
@@ -721,7 +721,7 @@ class method_base(object):
                 ans = True
         return ans
     def cal_mdate(self,base_mdate=None,jump_length=1,jump_kind='Y',fix_date=None):
-        #¸òcal_zdate¤£¦P¡Acal_mdateªºjump_kind¬O¥²¶ñÄæ¦ì¡A§_«hµLªk°Ï¤À
+        #è·Ÿcal_zdateä¸åŒï¼Œcal_mdateçš„jump_kindæ˜¯å¿…å¡«æ¬„ä½ï¼Œå¦å‰‡ç„¡æ³•å€åˆ†
         if base_mdate is None:
             base_mdate = self.current_mdate
         else:
@@ -740,7 +740,7 @@ class method_base(object):
                     fix_date = '0'+str(d_i+1)+'-01' if d_i<3 else str(d_i+1)+'-01'
                     jump_kind = 'Y'
         if  fix_date is not None:
-            #¨Ì·Óµ¹©w¤ë¤é¨Óºâ¥X
+            #ä¾ç…§çµ¦å®šæœˆæ—¥ä¾†ç®—å‡º
             if jump_kind is 'Y':
                 last_mdate = np.array([str(pd.to_datetime(base_mdate).year - jump_length)+'-'+fix_date]).astype('datetime64')[0]
             elif  jump_kind is 'S':
@@ -762,17 +762,17 @@ class method_base(object):
                 if len(adj_m)<2:
                     adj_m = '0'+adj_m
                 last_mdate = np.array([str(pd.to_datetime(base_mdate).year - jump_year)+'-'+adj_m+'-'+fix_date]).astype('datetime64')[0]
-        #ºâ¥X¤é´Á´N¬O«e±À¤é¤§«e³Ì¤jªº¤é´Á
+        #ç®—å‡ºæ—¥æœŸå°±æ˜¯å‰æ¨æ—¥ä¹‹å‰æœ€å¤§çš„æ—¥æœŸ
         all_mdate_list = pd.DataFrame(self.all_mdate_list,columns=['mdate'])
         new_base_mdate = all_mdate_list.loc[all_mdate_list['mdate']<last_mdate,'mdate'].max().strftime('%Y-%m-%d')
         return new_base_mdate
     def cal_zdate(self,base_date=None,jump_length=1,jump_kind='Y',fix_date=None):
-        #¥\¯à¨ç¦¡¡A¥i¥H¿W¥ß¨Ï¥Î¡A¨S±a¤Jbase_date«h¨ú¼Ò²Õªº¤é´Á
+        #åŠŸèƒ½å‡½å¼ï¼Œå¯ä»¥ç¨ç«‹ä½¿ç”¨ï¼Œæ²’å¸¶å…¥base_dateå‰‡å–æ¨¡çµ„çš„æ—¥æœŸ
         if base_date is None:
             base_date = self.current_zdate
         else:
             base_date = np.array([base_date]).astype('datetime64')[0]
-        #¥Î¨Ó±±¨î«e±À¤é
+        #ç”¨ä¾†æ§åˆ¶å‰æ¨æ—¥
         if  fix_date is None:
             a_m = str(pd.to_datetime(base_date).month) if len(str(pd.to_datetime(base_date).month))>1 else '0'+str(pd.to_datetime(base_date).month)
             a_d = str(pd.to_datetime(base_date).day) if len(str(pd.to_datetime(base_date).day))>1 else '0'+str(pd.to_datetime(base_date).day)
@@ -781,7 +781,7 @@ class method_base(object):
             elif  jump_kind is 'M':
                 fix_date = a_d
         if  fix_date is not None:
-            #¨Ì·Óµ¹©w¤ë¤é¨Óºâ¥X
+            #ä¾ç…§çµ¦å®šæœˆæ—¥ä¾†ç®—å‡º
             if len(fix_date.split('-'))==2:
                 jump_kind = 'Y'
                 last_date = np.array([str(pd.to_datetime(base_date).year - jump_length)+'-'+fix_date]).astype('datetime64')[0]
@@ -826,7 +826,7 @@ class method_base(object):
                     last_date = this_datefilter['zdate'].values[0]
                 else:
                     last_date = base_date
-        #ºâ¥X¤é´Á´N¬O«e±À¤é¤§«e³Ì¤jªº¤é´Á
+        #ç®—å‡ºæ—¥æœŸå°±æ˜¯å‰æ¨æ—¥ä¹‹å‰æœ€å¤§çš„æ—¥æœŸ
         all_zdate_list = pd.DataFrame(self.prc_basedate['zdate'].unique(),columns=['zdate'])
         if self.all_zdate_list[0] == last_date:
             new_base_zdate = pd.to_datetime(last_date).strftime('%Y-%m-%d')

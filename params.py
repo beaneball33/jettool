@@ -22,6 +22,7 @@ hold_coids = []
 hold_unit = []
 prc_basedate = None
 basic_info = None
+fin_cover = None
 findata_all = None
 all_date_data = None
 trained_model = {}
@@ -48,12 +49,13 @@ check_columns_relation = {}
 check_columns = {}
 back_interval = []
 check_correlation = {}
-input_dates = base_date.split('-')
-sampledates = [0,pandas.Timestamp(int(input_dates[0]),int(input_dates[1]),int(input_dates[2])),0]
+sampledates = [0,pandas.Timestamp(base_date),0]
 sampledates[0] = sampledates[1] - pandas.DateOffset(days=back_length) #回顧起日
 sampledates[2] = sampledates[1] - pandas.DateOffset(days=query_length) #最少6年樣本起日
-datastart_date = sampledates[2].strftime('%Y-%m-%d')
-current_zdate = sampledates[1].strftime('%Y-%m-%d')
+input_date = pandas.DataFrame(sampledates,columns=['zdate'])
+input_date['zdate'] = input_date['zdate'].astype(str).astype('datetime64')
+datastart_date = input_date.loc[2,'zdate']
+current_zdate = input_date.loc[1,'zdate']
 current_mdate = None
 listed_coids = []
 sampledates = sampledates
