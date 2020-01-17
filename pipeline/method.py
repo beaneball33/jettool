@@ -5,13 +5,13 @@ class method_base(object):
 
     def calculate_maxdrawback(self,window=None,col_type=True,df=None):
         if df is None:
-            self.portfolio_pv = np.nan_to_num(self.simple_roi_data.loc[self.simple_roi_data['pname']=='portfolio','present value'].values)
-            df = np.array(self.portfolio_pv)
+            self.portfolio_pv = numpy.nan_to_num(self.simple_roi_data.loc[self.simple_roi_data['pname']=='portfolio','present value'].values)
+            df = numpy.array(self.portfolio_pv)
         #最大回撤率
-        i = np.argmax((np.maximum.accumulate(df) - df) / np.maximum.accumulate(df))  # 結束位置
+        i = numpy.argmax((numpy.maximum.accumulate(df) - df) / numpy.maximum.accumulate(df))  # 結束位置
         if i == 0:
             return 0
-        j = np.argmax(df[:i])  # 開始位置
+        j = numpy.argmax(df[:i])  # 開始位置
         return ((df[j] - df[i]) / (df[j]))
     def reset_strategy(self,reset_date=None):
         print('reset')
@@ -41,14 +41,14 @@ class method_base(object):
 
                 betagroup=[betalist[i:i + parameter_nums] for i in range(0, len(betalist), parameter_nums )]
                 t_test=scipy.stats.ttest_1samp(betagroup,0)
-                mean=pd.DataFrame(pd.DataFrame(np.array([betalist[i:i + parameter_nums] for i in range(0, len(betalist), parameter_nums)])).mean()).round(decimals=16).T
-                pvalue=pd.DataFrame(t_test[1]).round(decimals=4).T
-                t_test_result=pd.concat([mean,pvalue])
+                mean=pandas.DataFrame(pandas.DataFrame(numpy.array([betalist[i:i + parameter_nums] for i in range(0, len(betalist), parameter_nums)])).mean()).round(decimals=16).T
+                pvalue=pandas.DataFrame(t_test[1]).round(decimals=4).T
+                t_test_result=pandas.concat([mean,pvalue])
                 t_test_result.pop(0)
                 t_test_result.columns=x_names
                 t_test_result.index=['coef','p-value']
                 #根據p-value排序以便後面pop
-                p_df=pd.DataFrame(t_test_result.T['p-value'].sort_values())
+                p_df=pandas.DataFrame(t_test_result.T['p-value'].sort_values())
                 p_df_over_alpha=p_df[p_df['p-value']>(alpha_rate/100)]
                 no_significant_number=len(p_df_over_alpha)
                 if no_significant_number>0:
@@ -71,7 +71,7 @@ class method_base(object):
         sub_df = portfolio_data.copy()
         if direction is None or factor is None:
             result_df = sub_df
-            result_df['temp'] = np.nan
+            result_df['temp'] = numpy.nan
         else:
             score_columns = []
             for i in range(len(factor)):
@@ -82,11 +82,11 @@ class method_base(object):
             rank_data=sub_df.groupby('coid')[score_columns].mean().rank()
             filter=rank_data[rank_data['市值']>0].drop(columns=['市值'])
             result=filter.sum(axis=1).sort_values().rank(method='max')[:int(len(filter)*rank_above*0.01)+1]
-            result_df = pd.DataFrame(result).rename(columns={0: 'temp'})
+            result_df = pandas.DataFrame(result).rename(columns={0: 'temp'})
         return result_df
     def make_famamacbethmodel(self,col_name='報酬率',check_index=['市值','現金股利率'],window='12m',alpha_rate=5,reset_list='01',keep=None,target_name=None,peer_future=False):
         t1 = time.time()
-        ans_val = np.nan
+        ans_val = numpy.nan
         target_name = self.check_function_input(target_name)
         if self.check_data_available(target_name):
             ans = self.data[target_name].values
@@ -99,7 +99,7 @@ class method_base(object):
             input_col_name = [col_name]+check_index
             this_date_data, this_window_type, window = self.get_activedate_data(window,clue_length=0,column_names=input_col_name,peer_future=peer_future)
             this_date_data = this_date_data.dropna(subset=input_col_name)
-            this_date_data['temp_date'] = pd.to_datetime(this_date_data['zdate']).dt.year*100+ pd.to_datetime(this_date_data['zdate']).dt.month
+            this_date_data['temp_date'] = pandas.to_datetime(this_date_data['zdate']).dt.year*100+ pandas.to_datetime(this_date_data['zdate']).dt.month
             if keep is not None:
                 keep_method = ['last','first']
                 if keep not in keep_method:
@@ -139,12 +139,12 @@ class method_base(object):
             famamacbeth_outcome = self.trained_model.get(col_name)
             factor = famamacbeth_outcome.columns.tolist()
             actual_direction = famamacbeth_outcome.loc['coef',:].values
-            direction = np.abs(actual_direction)/actual_direction
+            direction = numpy.abs(actual_direction)/actual_direction
         result_df = self.ranking(direction,factor,self.data[self.data['zdate']==self.current_zdate],rank_above).reset_index(drop=False)
         if self.trained_model.get(col_name) is not None and class_count>1:
-            class_interval = int(np.floor(result_df['temp'].max()/class_count))
+            class_interval = int(numpy.floor(result_df['temp'].max()/class_count))
             result_df['temp'] = result_df['temp']
-            result_df['temp'] = np.ceil(result_df['temp']/class_interval).astype(int)
+            result_df['temp'] = numpy.ceil(result_df['temp']/class_interval).astype(int)
             result_df.loc[result_df['temp']==0,'temp']  = 1
             result_df = result_df.rename(columns={'temp': col_name})
             result_df = self.moving_ranking(result_df,check_index='coid',group_name=col_name,coid_num=len(result_df['coid']),max_group=class_count,ascending=True)
@@ -178,8 +178,8 @@ class method_base(object):
         #檢查，若重置日期符合實際交易日，且需與該交易日相同
         ans = False
         for d_i in range(0,len(actual_reset_list)):
-            #print([pd.to_datetime(self.current_zdate).strftime('%Y-%m-%d'),actual_reset_list[d_i],reset_list_y[d_i]])
-            if pd.to_datetime(self.current_zdate).strftime('%Y-%m-%d') == actual_reset_list[d_i] and pd.to_datetime(self.current_zdate)>=pd.to_datetime(actual_reset_list[d_i]):
+            #print([pandas.to_datetime(self.current_zdate).strftime('%Y-%m-%d'),actual_reset_list[d_i],reset_list_y[d_i]])
+            if pandas.to_datetime(self.current_zdate).strftime('%Y-%m-%d') == actual_reset_list[d_i] and pandas.to_datetime(self.current_zdate)>=pandas.to_datetime(actual_reset_list[d_i]):
                 self.famamacbeth_outcome = None
                 ans = True
                 break
@@ -200,7 +200,7 @@ class method_base(object):
                 else:
                     month_list=['01','02','03','04','05','06','07','08','09','10','11','12']
                     list_add_month = [month_list[d_i]+'-'+reset_date for d_i in range(0,len(month_list))]        
-                reset_list_y = reset_list_y+ [str(pd.to_datetime(self.current_zdate).year)+'-'+list_add_month[d_i] for d_i in range(0,len(list_add_month))]
+                reset_list_y = reset_list_y+ [str(pandas.to_datetime(self.current_zdate).year)+'-'+list_add_month[d_i] for d_i in range(0,len(list_add_month))]
         reset_list_y = list(set(reset_list_y))
         actual_reset_list = [self.cal_zdate(base_date=self.check_available_date(reset_list_y[d_i]),jump_length=-1,jump_kind='D') for d_i in range(0,len(reset_list_y))]        
         return actual_reset_list  
@@ -220,7 +220,7 @@ class method_base(object):
             group_data = this_date_data.copy()
             group_data[group_name] = group_data[group_name].fillna(method='bfill')
             group_data[score_columns] = group_data[score_columns].fillna(0)
-            group_data['temp_date'] = pd.to_datetime(group_data['zdate']).dt.year*100+ pd.to_datetime(group_data['zdate']).dt.month
+            group_data['temp_date'] = pandas.to_datetime(group_data['zdate']).dt.year*100+ pandas.to_datetime(group_data['zdate']).dt.month
             if keep is not None:
                 keep_method = ['last','first']
                 if keep not in keep_method:
@@ -243,14 +243,14 @@ class method_base(object):
                             check_ok = True if check_type is True else False
                         else:
                             check_ok = False if check_type is True else True
-                        if np.mean(all_group_data[i])>0:
+                        if numpy.mean(all_group_data[i])>0:
                             check_ok = True if method=='positive' else False
                         else:
                             check_ok = True if method=='positive' else False
                     group_val = group_val+[check_ok]
-                group_val = np.array(group_val)
-                group_val = pd.DataFrame(group_val.astype(np.bool),columns=['temp'])
-                group_val[group_name] = np.array(all_group_name)
+                group_val = numpy.array(group_val)
+                group_val = pandas.DataFrame(group_val.astype(numpy.bool),columns=['temp'])
+                group_val[group_name] = numpy.array(all_group_name)
                 group_val =self.data.loc[:,['coid',group_name]].merge(group_val,on=[group_name],how='left')
                 self.result_df = group_val
                 ans = group_val['temp'].values
@@ -261,7 +261,7 @@ class method_base(object):
         if group_data is None:
             input_col_name=[group_name,check_index]
             group_data , this_window_type, window = self.get_activedate_data(window=window,clue_length=0,column_names=input_col_name)
-            group_data['temp_date'] = pd.to_datetime(group_data['zdate']).dt.year*100+ pd.to_datetime(group_data['zdate']).dt.month
+            group_data['temp_date'] = pandas.to_datetime(group_data['zdate']).dt.year*100+ pandas.to_datetime(group_data['zdate']).dt.month
             if keep is not None:
                 keep_method = ['last','first']
                 if keep not in keep_method:
@@ -282,13 +282,13 @@ class method_base(object):
             rank_data=group_data['temp'].rank(pct=True,ascending=ascending).values
             rank_data[(rank_data<=choose_above[1]/100)&(rank_data>choose_above[0]/100)] = 1
             rank_data[rank_data<1] = 0
-            rank_data = rank_data.astype(np.bool)
+            rank_data = rank_data.astype(numpy.bool)
         else:
             rank_data = self.return_previous_holding()
         return rank_data
     def return_previous_holding(self):
         if len(self.hold_coids)>0:
-            this_hold_list = pd.DataFrame(self.hold_coids[0],columns=['coid'])
+            this_hold_list = pandas.DataFrame(self.hold_coids[0],columns=['coid'])
             this_hold_list['temp'] = True
             this_hold_data = self.data.merge(this_hold_list,on=['coid'],how='left').copy().fillna(False)
             this_hold_data = this_hold_data['temp'].values
@@ -304,7 +304,7 @@ class method_base(object):
             rank_data=self.data[check_index].values
         else:
             if len(self.hold_coids)>0:
-                this_hold_list = pd.DataFrame(self.hold_coids[0],columns=['coid'])
+                this_hold_list = pandas.DataFrame(self.hold_coids[0],columns=['coid'])
                 this_hold_list['temp'] = True
                 rank_data = self.data.merge(this_hold_list,on=['coid'],how='left').copy().fillna(False)
                 rank_data = rank_data['temp'].values
@@ -336,7 +336,7 @@ class method_base(object):
 
                 if len(this_coid)>0:
                     unit_pv = self.cash/len(this_coid)
-                    this_hold_units = np.floor(unit_pv/this_closed)
+                    this_hold_units = numpy.floor(unit_pv/this_closed)
                     self.hold_unit = [this_hold_units.tolist()]+ self.hold_unit
                 else:
                     this_hold_units = []
@@ -345,12 +345,12 @@ class method_base(object):
             if len(this_coid)>0:
                 #要有購入才計算
                 unit_pv = self.cash/len(this_coid)
-                this_hold_units = np.floor(unit_pv/this_closed)
+                this_hold_units = numpy.floor(unit_pv/this_closed)
                 self.hold_unit = [this_hold_units.tolist()]
             else:
                 this_hold_units = self.data.loc[self.data['購入']==True,'購入'].astype(float).values
                 self.hold_unit = [this_hold_units.tolist()]
-        temp_ans = pd.DataFrame(this_hold_units,columns=['temp'])
+        temp_ans = pandas.DataFrame(this_hold_units,columns=['temp'])
         temp_ans['coid'] = this_coid
         temp_ans['zdate'] = self.current_zdate
         self.data = self.data.merge(temp_ans,on=['coid','zdate'],how='left')
@@ -365,12 +365,12 @@ class method_base(object):
             self.check_columns[condition] = []
         full = ['coid']+conditions
         this_condition = self.data.loc[:,full].fillna(False)
-        this_condition = this_condition[conditions].astype(np.int).values
+        this_condition = this_condition[conditions].astype(numpy.int).values
         if  'or' in check_type  :
-            check_data = np.amax(this_condition,axis=1)
+            check_data = numpy.amax(this_condition,axis=1)
         else:
-            check_data = np.amin(this_condition,axis=1)
-        ans = check_data.astype(np.bool)
+            check_data = numpy.amin(this_condition,axis=1)
+        ans = check_data.astype(numpy.bool)
         return ans
     def check_between(self,check_index,up_index,down_index,window='1d',target_name=None):
         edit_cols= self.confirm_checkindex(check_index1=check_index,window=window)
@@ -382,8 +382,8 @@ class method_base(object):
         if self.check_data_available(target_name):
             ans = self.data[target_name].values
             return ans
-        down_data = self.check_above(check_index,down_index,window).astype(np.int)
-        up_data = self.check_above(up_index,check_index,window).astype(np.int)
+        down_data = self.check_above(check_index,down_index,window).astype(numpy.int)
+        up_data = self.check_above(up_index,check_index,window).astype(numpy.int)
         all_coid_data = self.current_coids.merge(up_data,on=['coid'],how='left')
         all_coid_data = self.current_coids.merge(down_data,on=['coid'],how='left')
         all_coid_data['temp'] = all_coid_data[down_index]&all_coid_data[check_index]
@@ -452,9 +452,9 @@ class method_base(object):
             roib_y0 = roib_list[1:len(roib_list)]
             roib_y1 = roib_list[0:len(roib_list)-1]
             if method is 'arithmetic':
-                this_date_data['temp_mid'] = [0]+((roib_y1 - roib_y0 )/np.abs(roib_y0)).tolist()
+                this_date_data['temp_mid'] = [0]+((roib_y1 - roib_y0 )/numpy.abs(roib_y0)).tolist()
             elif method is 'geometric':
-                this_date_data['temp_mid'] = [0] + np.log(roib_y1/roib_y0).tolist()
+                this_date_data['temp_mid'] = [0] + numpy.log(roib_y1/roib_y0).tolist()
             this_date_data['temp'] = this_date_data['temp_mid'].rolling(window=(rolling_window-1)).sum()
             if col_type is 'mean':
                 this_date_data['temp'] = this_date_data['temp'] / (rolling_window-1)
@@ -479,11 +479,11 @@ class method_base(object):
         this_date_data, this_window_type, window = self.get_activedate_data(window,clue_length=0,column_names=[check_index],peer_future=peer_future)
         this_coid_list = this_date_data['coid'].unique().tolist()
         roib_list = [this_date_data.loc[this_date_data['coid']==this_coid_list[i],check_index].values.tolist() for i in range(0,len(this_coid_list))]
-        roib_list = np.array(roib_list)
-        roib_std = np.std(roib_list,axis=1)
-        all_date_data = pd.DataFrame(this_coid_list,columns=['coid'])
+        roib_list = numpy.array(roib_list)
+        roib_std = numpy.std(roib_list,axis=1)
+        all_date_data = pandas.DataFrame(this_coid_list,columns=['coid'])
         all_date_data['zdate'] = self.current_zdate
-        all_date_data['temp'] = np.sqrt(252)*roib_std/100
+        all_date_data['temp'] = numpy.sqrt(252)*roib_std/100
         all_coid_data = all_date_data.loc[:,['coid','temp']]
         ans = self.unify_data(all_coid_data,target_name,check_index='temp')
         t2 = time.time()
@@ -502,7 +502,7 @@ class method_base(object):
             return ans
         input_col_name = [check_index]
         this_date_data, this_window_type, window = self.get_activedate_data(window,column_names=input_col_name)
-        all_date_data = pd.DataFrame(columns=['zdate','coid','temp'])
+        all_date_data = pandas.DataFrame(columns=['zdate','coid','temp'])
         #這邊要加上分類清單產生
         if category is None:
             check_coid_category_list = [self.input_coids]
@@ -525,7 +525,7 @@ class method_base(object):
             all_date_data = all_date_data.append(this_coid_data,sort=False)
         all_coid_data = all_date_data.loc[:,['coid','temp']]
         if class_interval is not None:
-            all_coid_data['temp'] = np.ceil(all_coid_data['temp']/class_interval).astype(int)
+            all_coid_data['temp'] = numpy.ceil(all_coid_data['temp']/class_interval).astype(int)
         ans = self.unify_data(all_coid_data,target_name,check_index='temp')
         t2 = time.time()
         elapsed_time = t2-t1
@@ -545,7 +545,7 @@ class method_base(object):
                 input_col_name = input_col_name + [weight]
 
         this_date_data, this_window_type, window = self.get_activedate_data(window,column_names=input_col_name)
-        all_coid_data = pd.DataFrame(columns=['zdate','coid','temp'])
+        all_coid_data = pandas.DataFrame(columns=['zdate','coid','temp'])
         #print(this_date_data[this_date_data['coid']=='2330'])
         #這邊要加上分類清單產生
         if category is None:
@@ -591,10 +591,10 @@ class method_base(object):
             elapsed_time = t2-t1
             return ans
         this_date_data, this_window_type, window = self.get_activedate_data(window,column_names=[check_index],peer_future=peer_future)
-        all_coid_data = pd.DataFrame(columns=['zdate','coid','temp'])
-        all_date_data = pd.DataFrame(columns=['zdate','coid','temp'])
+        all_coid_data = pandas.DataFrame(columns=['zdate','coid','temp'])
+        all_date_data = pandas.DataFrame(columns=['zdate','coid','temp'])
         #print(this_date_data.loc[this_date_data['coid']=='2330',['zdate','coid','mdate',check_index]])
-            #year_start = self.sampledates[1] - pd.DateOffset(years=window)
+            #year_start = self.sampledates[1] - pandas.DateOffset(years=window)
             #year_end = sampledates[1]
         check_data = []
             #計算
@@ -653,9 +653,9 @@ class method_base(object):
     def unify_data(self,input_data,target_name,check_index='temp'):
         all_coid_data = self.current_coids.merge(input_data,on=['coid'],how='left')
         all_coid_data[check_index] = all_coid_data[check_index].fillna(0)
-        all_coid_data[check_index] = all_coid_data[check_index].replace([np.inf, -np.inf], np.nan)
+        all_coid_data[check_index] = all_coid_data[check_index].replace([numpy.inf, -numpy.inf], numpy.nan)
         if target_name is None:
-            self.all_date_data[check_index] = np.nan
+            self.all_date_data[check_index] = numpy.nan
             self.all_date_data.loc[self.all_date_data['zdate']==self.current_zdate,check_index] = all_coid_data[check_index].values
             ans = self.all_date_data[check_index].values
             self.all_date_data = self.all_date_data.drop(columns=[check_index])
@@ -725,10 +725,10 @@ class method_base(object):
         if base_mdate is None:
             base_mdate = self.current_mdate
         else:
-            base_mdate = np.array([base_mdate]).astype('datetime64')[0]
+            base_mdate = numpy.array([base_mdate]).astype('datetime64')[0]
         if  fix_date is None:
-            a_m = str(pd.to_datetime(base_mdate).month) if len(str(pd.to_datetime(base_mdate).month))>1 else '0'+str(pd.to_datetime(base_mdate).month)
-            a_d = str(pd.to_datetime(base_mdate).day) if len(str(pd.to_datetime(base_mdate).day))>1 else '0'+str(pd.to_datetime(base_mdate).day)
+            a_m = str(pandas.to_datetime(base_mdate).month) if len(str(pandas.to_datetime(base_mdate).month))>1 else '0'+str(pandas.to_datetime(base_mdate).month)
+            a_d = str(pandas.to_datetime(base_mdate).day) if len(str(pandas.to_datetime(base_mdate).day))>1 else '0'+str(pandas.to_datetime(base_mdate).day)
             if jump_kind is 'Y':
                 fix_date = a_m+'-'+a_d
             elif  jump_kind is 'S':
@@ -742,28 +742,28 @@ class method_base(object):
         if  fix_date is not None:
             #依照給定月日來算出
             if jump_kind is 'Y':
-                last_mdate = np.array([str(pd.to_datetime(base_mdate).year - jump_length)+'-'+fix_date]).astype('datetime64')[0]
+                last_mdate = numpy.array([str(pandas.to_datetime(base_mdate).year - jump_length)+'-'+fix_date]).astype('datetime64')[0]
             elif  jump_kind is 'S':
                 jump_year = 0
                 jump_length *=3
                 jump_month = jump_length
-                if pd.to_datetime(base_mdate).month<=jump_length:
+                if pandas.to_datetime(base_mdate).month<=jump_length:
                     if (jump_month)%12!=0:
                         if jump_month>0:
-                            jump_year = int(np.floor((jump_length - pd.to_datetime(base_mdate).month)/12)) +1
+                            jump_year = int(numpy.floor((jump_length - pandas.to_datetime(base_mdate).month)/12)) +1
                             jump_month = (jump_month)%12 -12
                         else:
-                            jump_year = int(np.floor((jump_length - pd.to_datetime(base_mdate).month)/12)) +1
+                            jump_year = int(numpy.floor((jump_length - pandas.to_datetime(base_mdate).month)/12)) +1
                             jump_month = (12+(jump_month)%12)%12
                     else:
                         jump_year = int(jump_length/12)
                         jump_month = 0
-                adj_m = str(pd.to_datetime(base_mdate).month - jump_month)
+                adj_m = str(pandas.to_datetime(base_mdate).month - jump_month)
                 if len(adj_m)<2:
                     adj_m = '0'+adj_m
-                last_mdate = np.array([str(pd.to_datetime(base_mdate).year - jump_year)+'-'+adj_m+'-'+fix_date]).astype('datetime64')[0]
+                last_mdate = numpy.array([str(pandas.to_datetime(base_mdate).year - jump_year)+'-'+adj_m+'-'+fix_date]).astype('datetime64')[0]
         #算出日期就是前推日之前最大的日期
-        all_mdate_list = pd.DataFrame(self.all_mdate_list,columns=['mdate'])
+        all_mdate_list = pandas.DataFrame(self.all_mdate_list,columns=['mdate'])
         new_base_mdate = all_mdate_list.loc[all_mdate_list['mdate']<last_mdate,'mdate'].max().strftime('%Y-%m-%d')
         return new_base_mdate
     def cal_zdate(self,base_date=None,jump_length=1,jump_kind='Y',fix_date=None):
@@ -771,11 +771,11 @@ class method_base(object):
         if base_date is None:
             base_date = self.current_zdate
         else:
-            base_date = np.array([base_date]).astype('datetime64')[0]
+            base_date = numpy.array([base_date]).astype('datetime64')[0]
         #用來控制前推日
         if  fix_date is None:
-            a_m = str(pd.to_datetime(base_date).month) if len(str(pd.to_datetime(base_date).month))>1 else '0'+str(pd.to_datetime(base_date).month)
-            a_d = str(pd.to_datetime(base_date).day) if len(str(pd.to_datetime(base_date).day))>1 else '0'+str(pd.to_datetime(base_date).day)
+            a_m = str(pandas.to_datetime(base_date).month) if len(str(pandas.to_datetime(base_date).month))>1 else '0'+str(pandas.to_datetime(base_date).month)
+            a_d = str(pandas.to_datetime(base_date).day) if len(str(pandas.to_datetime(base_date).day))>1 else '0'+str(pandas.to_datetime(base_date).day)
             if jump_kind is 'Y':
                 fix_date = a_m+'-'+a_d
             elif  jump_kind is 'M':
@@ -784,40 +784,40 @@ class method_base(object):
             #依照給定月日來算出
             if len(fix_date.split('-'))==2:
                 jump_kind = 'Y'
-                last_date = np.array([str(pd.to_datetime(base_date).year - jump_length)+'-'+fix_date]).astype('datetime64')[0]
+                last_date = numpy.array([str(pandas.to_datetime(base_date).year - jump_length)+'-'+fix_date]).astype('datetime64')[0]
             elif len(fix_date.split('-'))==1:
                 jump_kind = 'M'
                 jump_year = 0
                 jump_month = jump_length
-                if pd.to_datetime(base_date).month<=jump_length or pd.to_datetime(base_date).month-jump_length>12:
+                if pandas.to_datetime(base_date).month<=jump_length or pandas.to_datetime(base_date).month-jump_length>12:
                     if (jump_month)%12!=0:
                         if jump_month>0:
-                            jump_year = int(np.floor((jump_length - pd.to_datetime(base_date).month)/12)) +1
+                            jump_year = int(numpy.floor((jump_length - pandas.to_datetime(base_date).month)/12)) +1
                             jump_month = (jump_month)%12 -12
                         else:
-                            jump_year = int(np.floor((jump_length - pd.to_datetime(base_date).month)/12)) +1
+                            jump_year = int(numpy.floor((jump_length - pandas.to_datetime(base_date).month)/12)) +1
                             jump_month = (12+(jump_month)%12)%12
                     else:
                         jump_year = int(jump_length/12)
                         jump_month = 0
-                adj_m = str(pd.to_datetime(base_date).month - jump_month)
+                adj_m = str(pandas.to_datetime(base_date).month - jump_month)
                 if len(adj_m)<2:
                     adj_m = '0'+adj_m
-                adj_date = str(pd.to_datetime(base_date).year - jump_year)+'-'+adj_m+'-'+fix_date
+                adj_date = str(pandas.to_datetime(base_date).year - jump_year)+'-'+adj_m+'-'+fix_date
                 adj_date = self.check_available_date(adj_date)
-                last_date = np.array([adj_date]).astype('datetime64')[0]
+                last_date = numpy.array([adj_date]).astype('datetime64')[0]
         else:
             if jump_kind is 'W':
-                last_date = base_date - np.timedelta64(jump_length,jump_kind)
+                last_date = base_date - numpy.timedelta64(jump_length,jump_kind)
             else:
                 if jump_length>0:
                     jump_length-=1
                 window = abs(jump_length)
                 if jump_length >0:
-                    this_datefilter = pd.DataFrame(self.all_zdate_list,columns=['zdate']).sort_values(by=['zdate'],ascending=False)
+                    this_datefilter = pandas.DataFrame(self.all_zdate_list,columns=['zdate']).sort_values(by=['zdate'],ascending=False)
                     this_datefilter = this_datefilter[this_datefilter['zdate']<=base_date]
                 else:
-                    this_datefilter = pd.DataFrame(self.all_zdate_list,columns=['zdate']).sort_values(by=['zdate'],ascending=True)
+                    this_datefilter = pandas.DataFrame(self.all_zdate_list,columns=['zdate']).sort_values(by=['zdate'],ascending=True)
                     this_datefilter = this_datefilter[this_datefilter['zdate']>=base_date]
 
                 if len(this_datefilter)>1:
@@ -827,11 +827,11 @@ class method_base(object):
                 else:
                     last_date = base_date
         #算出日期就是前推日之前最大的日期
-        all_zdate_list = pd.DataFrame(self.prc_basedate['zdate'].unique(),columns=['zdate'])
+        all_zdate_list = pandas.DataFrame(self.prc_basedate['zdate'].unique(),columns=['zdate'])
         if self.all_zdate_list[0] == last_date:
-            new_base_zdate = pd.to_datetime(last_date).strftime('%Y-%m-%d')
+            new_base_zdate = pandas.to_datetime(last_date).strftime('%Y-%m-%d')
         else:
-            last_date = pd.to_datetime(last_date)
+            last_date = pandas.to_datetime(last_date)
             if last_date <=all_zdate_list['zdate'].min():
                 new_base_zdate = all_zdate_list['zdate'].min()
             else:

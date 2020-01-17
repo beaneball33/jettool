@@ -52,7 +52,25 @@ class listed_stock(querybase.query_base):
         self.benchmark_roi['sdate'] = self.benchmark_roi['zdate'].astype(str).str[0:7].astype('datetime64')
         self.all_zdate_list = self.benchmark_roi['zdate'].unique()
         self.back_date_list = self.benchmark_roi['zdate'].unique()
+    def create_prc_base(self,query_coids=None):
+        #用來把代碼轉換成有考慮上市日的coid+zdate集合
+        prc_basedate = None
+        if query_coids is None:
+            query_coids = self.input_coids
+        for query_coid in query_coids:
+            list_day1 = self.basic_info.loc[self.basic_info['coid']==query_coid,'list_day1'].values[0]
 
+            this_prc_basedate = self.benchmark_roi[(self.benchmark_roi['zdate']>=list_day1)].copy()
+            if int(self.basic_info.loc[self.basic_info['coid']==query_coid,'list_day2'].isnull().values[0])==0:
+                list_day2 = self.basic_info.loc[self.basic_info['coid']==query_coid,'list_day2'].values[0]       
+                this_prc_basedate = self.benchmark_roi[(self.benchmark_roi['zdate']<=list_day2)].copy()                
+            #要補上代碼，否則仍是空值
+            this_prc_basedate['coid'] = query_coid
+            if prc_basedate is None:
+                prc_basedate = this_prc_basedate
+            else:
+                prc_basedate = prc_basedate.append(this_prc_basedate,sort=False)
+        return prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
     def get_dailydata(self,query_coids=None,base_startdate='2015-12-31',base_date='2019-12-31'):
         query_column = ['mdate','coid','close_d','open_d','high_d','low_d','roib','mv','tej_cdiv']
         rename_column = {'mdate':'zdate','close_d':'股價','open_d':'開盤價',

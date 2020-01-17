@@ -28,6 +28,8 @@ all_date_data = None
 trained_model = {}
 hold_data = pandas.DataFrame(columns=['zdate','coid','unit','現值'])
 backtest_message={}
+table_info = {}
+
 current_dir = 'none'
 indicators = []
 indicator_attr = {}

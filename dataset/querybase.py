@@ -8,7 +8,51 @@ class query_base(object):
 
     def set_apikey(self,api_key='yourkey'):
         self.tejapi.ApiConfig.api_key = api_key
-        
+    def get_info(self):
+        info = self.tejapi.ApiConfig.info()
+        return info
+    def query_data_with_date_coid(self,table_name='TWN/APRCD',query_coid=['2330'],mdate_up='2019-12-31',mdate_down='2018-12-31',query_columns=['coid','mdate'],rename_columns=None):
+        query_columns = list(set(query_columns + ['coid','mdate']))
+        data = self.tejapi.get(table_name,coid=query_coid,
+            mdate={'gte':mdate_down,'lte':mdate_up},
+            opts={"sort":"mdate.desc",'columns':query_columns}, paginate=True
+            ).rename(index=str, columns={'mdate':'zdate'})
+        data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
+        data['zdate'] = data['zdate'].astype(str).astype('datetime64')
+        if rename_columns is not None:
+            print(rename_columns)
+            data = data.rename(index=str, columns=rename_columns)
+        return data
+    def get_table_cname(self,table_name='TWN/APRCD',language='cname'):
+        if self.table_info.get(table_name) is None:
+            table_info = self.tejapi.table_info(table_name)
+            table_info['columns_cname'] = [ cols['cname'] for cols in table_info['columns'].values()]
+            table_info['columns_name'] = [ cols['name'] for cols in table_info['columns'].values()]
+            self.table_info[table_name] = table_info
+        return self.table_info[table_name]['name']
+
+    def compare_column_name(self,table_name,query_columns,kind='cname'):
+        table_cname = self.get_table_cname(table_name=table_name)
+        all_columns = self.table_info[table_name]['columns']
+        ans_code = []
+        ans_name = []
+        for column in all_columns:
+            if kind in ['cname','name']:
+                name = all_columns.get(column)[kind]
+            else:
+                name = column
+            if name in query_columns:
+                ans_code += [column]
+                ans_name += [name]
+        left_name = numpy.setdiff1d(query_columns, ans_name).tolist()
+        if len(left_name)>0:
+            print('lack columns:')
+            print(left_name)
+        return ans_code,ans_name
+    def get_column_name(self,table_name='TWN/APRCD',language='cname'):
+        table_cname = self.get_table_cname(table_name=table_name)
+        table_info = self.table_info.get(table_name)
+        return {'columns_cname':table_info['columns_cname'],'columns_name':table_info['columns_name']}
     def set_listed_coid(self,df):
         listed_coids = self.basic_info.loc[self.basic_info['list_day1']<=self.current_zdate,'coid'].values.tolist()
         self.current_coids = df.loc[(df['zdate']==self.current_zdate),['zdate','coid']]
@@ -85,6 +129,6 @@ class query_base(object):
             else:
                 current_data = current_data.sort_values(by=['coid','temp_d']).drop_duplicates(subset=['coid','mdate'],keep='first').drop(columns=['temp_d'])
 
-        current_data = current_data.loc[current_data['coid'].isin(self.listed_coids),:].reset_index(drop=True)
+        current_data = current_data.loc[current_data['coid'].isin(self.listed_coids),current_data.columns].reset_index(drop=True)
         current_data[column_names] = current_data[column_names].replace([numpy.inf, -numpy.inf], numpy.nan)
         return current_data ,this_window_type, window
