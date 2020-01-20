@@ -34,11 +34,13 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
             self.accountData['cname'].isin(column_names),['code','ename','cname']
             ].drop_duplicates(subset=['code'],keep='last')
         available_fin_name = available_fin_name['cname'].values
+        self.get_report_data(mkts=mkts,acc_name=available_fin_name)
         #取出差異名稱
         left_name = numpy.setdiff1d(column_names, available_fin_name)
         #檢查日資料格式表單中可取得名稱、排除差異名稱、取得資料
         all_pre_dataset = ['TWN/APRCD','TWN/AFF_RAW']
         self.get_benchmark(base_startdate=self.datastart_date,base_date=self.base_date)
+        self.prc_basedate = self.create_prc_base()
         for dataset_name in all_pre_dataset:
             available_items = self.get_column_name(table_name=dataset_name)
             available_cname = available_items.get('columns_cname')
@@ -59,17 +61,14 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
                     query_columns=available_code,
                     rename_columns=rename_set)
                 if len(queried_data)>0:
-                    if self.dataset is None:
-                        self.dataset = queried_data
-                    else:
-                        self.dataset = self.dataset.merge(queried_data,on=['zdate','coid'],how='inner')
+                    self.prc_basedate = self.prc_basedate.merge(queried_data,on=['zdate','coid'],how='inner')
         
         
-        #if self.all_date_data is None and self.prc_basedate is not None and self.findata_all is not None:
-        #    self.set_back_test(back_interval=[1,-1])
-        #    self.manage_report()
-        #df = self.get_activedate_data(window=window,column_names=column_names,base_date=base_date)[0]
-        return self.dataset
+        if self.all_date_data is None and self.prc_basedate is not None and self.findata_all is not None:
+            self.set_back_test(back_interval=[1,-1])
+            self.manage_report()
+        df = self.get_activedate_data(window=window,column_names=column_names,base_date=base_date)[0]
+        return df
     def get_price_data(self,mkts=['TSE','OTC']):
         print('查詢股價資料')
         self.get_basicdata(mkts=mkts,base_startdate=self.datastart_date)
