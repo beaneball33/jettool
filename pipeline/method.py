@@ -1,6 +1,6 @@
 import pandas
 import numpy
-
+from datetime import datetime, date, timedelta
 class method_base(object):
 
     def calculate_maxdrawback(self,window=None,col_type=True,df=None):
@@ -766,7 +766,7 @@ class method_base(object):
         all_mdate_list = pandas.DataFrame(self.all_mdate_list,columns=['mdate'])
         new_base_mdate = all_mdate_list.loc[all_mdate_list['mdate']<last_mdate,'mdate'].max().strftime('%Y-%m-%d')
         return new_base_mdate
-    def cal_zdate(self,base_date=None,jump_length=1,jump_kind='Y',fix_date=None):
+    def cal_zdate(self,base_date=None,jump_length=1,jump_kind='Y',fix_date=None,tradeday=True):
         #功能函式，可以獨立使用，沒帶入base_date則取模組的日期
         if base_date is None:
             base_date = self.current_zdate
@@ -826,17 +826,20 @@ class method_base(object):
                     last_date = this_datefilter['zdate'].values[0]
                 else:
                     last_date = base_date
-        #算出日期就是前推日之前最大的日期
-        all_zdate_list = pandas.DataFrame(self.prc_basedate['zdate'].unique(),columns=['zdate'])
-        if self.all_zdate_list[0] == last_date:
-            new_base_zdate = pandas.to_datetime(last_date).strftime('%Y-%m-%d')
+        if tradeday is False:
+            new_base_zdate = last_date
         else:
-            last_date = pandas.to_datetime(last_date)
-            if last_date <=all_zdate_list['zdate'].min():
-                new_base_zdate = all_zdate_list['zdate'].min()
+            #需基於交易日再過濾出資料
+            all_zdate_list = pandas.DataFrame(self.prc_basedate['zdate'].unique(),columns=['zdate'])
+            if self.all_zdate_list[0] == last_date:
+                new_base_zdate = pandas.to_datetime(last_date).strftime('%Y-%m-%d')
             else:
-                new_base_zdate = all_zdate_list.loc[all_zdate_list['zdate']<last_date,'zdate'].max()
-            new_base_zdate = new_base_zdate.strftime('%Y-%m-%d')
+                last_date = pandas.to_datetime(last_date)
+                if last_date <=all_zdate_list['zdate'].min():
+                    new_base_zdate = all_zdate_list['zdate'].min()
+                else:
+                    new_base_zdate = all_zdate_list.loc[all_zdate_list['zdate']<last_date,'zdate'].max()
+                new_base_zdate = new_base_zdate.strftime('%Y-%m-%d')
         return new_base_zdate
     def check_available_date(self,zdate):
         correctDate = False

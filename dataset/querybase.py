@@ -57,21 +57,8 @@ class query_base(object):
         listed_coids = self.basic_info.loc[self.basic_info['list_day1']<=self.current_zdate,'coid'].values.tolist()
         self.current_coids = df.loc[(df['zdate']==self.current_zdate),['zdate','coid']]
         self.listed_coids = df.loc[(df['zdate']==self.current_zdate)&(df['coid'].isin(listed_coids)),'coid'].values.tolist()    
-    def get_activedate_data(self,window,column_names,peer_future=False,base_date=None,base_mdate=None,clue_length=None,keep='first'):
-        current_data = None
-        column_names = ['zdate','mdate','coid']+column_names
-        df = self.all_date_data
-        if self.all_date_data is None and self.prc_basedate is None:
-            df = self.findata_all
-        elif self.findata_all is None:
-            df = self.prc_basedate
+    def cal_zdate_by_window(self,window,base_date,peer_future=False,tradeday=True):
         if 'q' not in window:
-            if clue_length is None:
-                clue_length = 0
-            if base_date is None:
-                base_date = self.current_zdate
-            elif base_date is not None:
-                base_date =numpy.array([base_date]).astype('datetime64')[0]
             if 'd'  in window:
                 this_window_type = 'D'
                 window = int(window.replace('d',''))
@@ -82,7 +69,23 @@ class query_base(object):
                 this_window_type = 'M'
                 window = int(window.replace('m',''))
             jump_length = window if peer_future is False else -1*window
-            next_base_date = self.cal_zdate(base_date=base_date,jump_length=jump_length,jump_kind=this_window_type)
+            next_base_date = self.cal_zdate(base_date=base_date,jump_length=jump_length,jump_kind=this_window_type,tradeday=tradeday)
+        return this_window_type,next_base_date
+    def get_activedate_data(self,window,column_names,peer_future=False,base_date=None,base_mdate=None,clue_length=None,keep='first'):
+        current_data = None
+        column_names = ['zdate','mdate','coid']+column_names
+        df = self.all_date_data
+
+        if 'q' not in window:
+            if clue_length is None:
+                clue_length = 0
+            if base_date is None:
+                base_date = str(self.current_zdate)
+            elif base_date is not None:
+                base_date =numpy.array([base_date]).astype('datetime64')[0]
+
+            this_window_type,next_base_date = self.cal_zdate_by_window(window=window,base_date=base_date,peer_future=peer_future)
+
             if pandas.to_datetime(base_date).strftime('%Y-%m-%d')==next_base_date:
                 current_data = df.loc[(df['zdate']<=base_date)&(df['zdate']>=next_base_date),column_names]
                 current_data['temp_d'] = (base_date - current_data['zdate']) / numpy.timedelta64(1, 'D')
@@ -128,7 +131,7 @@ class query_base(object):
                 current_data = current_data.sort_values(by=['coid','mdate']).drop_duplicates(subset=['coid','mdate'],keep='first').drop(columns=['temp_d'])
             else:
                 current_data = current_data.sort_values(by=['coid','temp_d']).drop_duplicates(subset=['coid','mdate'],keep='first').drop(columns=['temp_d'])
-
+        
         current_data = current_data.loc[current_data['coid'].isin(self.listed_coids),current_data.columns].reset_index(drop=True)
         current_data[column_names] = current_data[column_names].replace([numpy.inf, -numpy.inf], numpy.nan)
         return current_data ,this_window_type, window

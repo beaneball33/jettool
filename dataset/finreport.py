@@ -174,3 +174,9 @@ class financial_report(querybase.query_base):
             cgrp_code = [cgrp_list.get(cgrp[k]) for k in range(0,len(cgrp))]
             ans = self.activeAccountData.loc[self.activeAccountData['acct_type'].isin(cgrp_code),'cdesc'].reset_index(drop=True)
         return ans
+    def get_available_name(self,column_names):
+        available_fin_name = self.accountData.loc[
+            self.accountData['cname'].isin(column_names),['code','ename','cname']
+            ].drop_duplicates(subset=['code'],keep='last')
+        available_fin_name = available_fin_name['cname'].values
+        return available_fin_name
