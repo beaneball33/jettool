@@ -840,6 +840,8 @@ class method_base(object):
                 else:
                     new_base_zdate = all_zdate_list.loc[all_zdate_list['zdate']<last_date,'zdate'].max()
                 new_base_zdate = new_base_zdate.strftime('%Y-%m-%d')
+        new_base_zdate = numpy.array([new_base_zdate]).astype('datetime64')[0]
+
         return new_base_zdate
     def check_available_date(self,zdate):
         correctDate = False

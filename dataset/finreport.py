@@ -1,5 +1,6 @@
 from . import querybase
 import pandas
+import numpy
 class financial_report(querybase.query_base):
     def __init__(self):
         self.accountData = None
@@ -134,7 +135,7 @@ class financial_report(querybase.query_base):
         print('成功查詢會計家數:'+str(len(findata_all['coid'].unique())))
         return findata_all
         
-    def do_query(self,query_code,query_length = 1,active_view=False):
+    def do_query(self,query_code,query_length = 365,active_view=False):
         acc_code_set = set(query_code)
         query_code = list(acc_code_set)
         fx_list = []
@@ -144,8 +145,8 @@ class financial_report(querybase.query_base):
                 query_code.remove(codes)
 
         self.query_length = query_length
-        self.datastart_date = pandas.Timestamp(self.current_zdate) - pandas.DateOffset(days=(query_length+1)) #最少6年樣本起日
-        self.datastart_date = self.datastart_date.strftime('%Y-%m-%d')
+        self.datastart_date = self.current_zdate - numpy.timedelta64(self.query_length,'D') 
+
         #查詢績效指標報酬率    
         if len(self.input_coids)>0:
             #先查詢財報公告日，要已公告日為主要日期
@@ -156,6 +157,9 @@ class financial_report(querybase.query_base):
             else:
                 self.active_view = True
                 self.findata_all = self.get_active_report(query_code=query_code)
+            
+            self.all_mdate_list = numpy.sort(self.findata_all['mdate'].astype(str).unique().astype('datetime64')) 
+            self.current_mdate = self.all_mdate_list[len(self.all_mdate_list)-1] 
         self.fxrate_attr = {}
         if len(fx_list)>0:
             print('查詢匯率')

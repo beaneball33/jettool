@@ -1,17 +1,34 @@
 ﻿import pandas
+import numpy
 import os
 import tejapi
 tejapi.ApiConfig.api_key = "your_API_key"
 
+"""
+在tejtool中，所有的日期皆必須維持datetime64且最小單位到日，ex:"2019-11-23"的格式
+模組初始化後自動產生預設的日期組
+current_zdate        資料觀測日
+datastart_date       資料查詢起日
+backstart_date       回顧測試起始日
+"""
 back_length = 365
-query_length = 365
+query_length = 365*2
+
+current_zdate  = numpy.datetime64('today') 
+datastart_date = current_zdate - numpy.timedelta64(query_length,'D')
+backstart_date = current_zdate - numpy.timedelta64(back_length,'D')
+
+
 coid_length_index = 300
 input_coids = None
 cash = 1000000
 benchmark_cash = 1000000
 benchmark_id = 'Y9997'
 back_date_list = None
-base_date = '2019-12-31'
+market = 'TWN'
+
+all_prc_dataset = ['APRCD','AFF_RAW','AMT1','ABSTN']
+mdate_name_dict = {"ASALE":"annd_s"}
 data = pandas.DataFrame(columns=['zdate','coid'])
 show_coid = '2330'
 active_view = False
@@ -51,15 +68,11 @@ check_columns_relation = {}
 check_columns = {}
 back_interval = []
 check_correlation = {}
-sampledates = [0,pandas.Timestamp(base_date),0]
-sampledates[0] = sampledates[1] - pandas.DateOffset(days=back_length) #回顧起日
-sampledates[2] = sampledates[1] - pandas.DateOffset(days=query_length) #最少6年樣本起日
-input_date = pandas.DataFrame(sampledates,columns=['zdate'])
-input_date['zdate'] = input_date['zdate'].astype(str).astype('datetime64')
-datastart_date = input_date.loc[2,'zdate']
-current_zdate = input_date.loc[1,'zdate']
+
+
+
 current_mdate = None
 listed_coids = []
-sampledates = sampledates
+
 accountData = None
 activeAccountData = None

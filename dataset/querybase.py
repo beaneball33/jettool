@@ -1,7 +1,11 @@
 ﻿import tejapi
 import pandas
 import numpy
+
 tejapi.ApiConfig.api_key = "your_API_key"
+
+
+
 class query_base(object):
     def __init__(self):
         self.tejapi = tejapi
@@ -11,29 +15,43 @@ class query_base(object):
     def get_info(self):
         info = self.tejapi.ApiConfig.info()
         return info
-    def query_data_with_date_coid(self,table_name='TWN/APRCD',query_coid=['2330'],mdate_up='2019-12-31',mdate_down='2018-12-31',query_columns=['coid','mdate'],rename_columns=None):
+    def query_data_with_date_coid(self,market='TWN',table_name='APRCD',query_coid=['2330'],mdate_up='2019-12-31',mdate_down='2018-12-31',query_columns=['coid','mdate'],rename_columns=None):
+        dataset_name = market+'/'+table_name
         query_columns = list(set(query_columns + ['coid','mdate']))
-        data = self.tejapi.get(table_name,coid=query_coid,
-            mdate={'gte':mdate_down,'lte':mdate_up},
-            opts={"sort":"mdate.desc",'columns':query_columns}, paginate=True
-            ).rename(index=str, columns={'mdate':'zdate'})
-        data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
-        data['zdate'] = data['zdate'].astype(str).astype('datetime64')
+        self.data = None
+        mdate_name = self.mdate_name_dict.get(table_name)
+        if mdate_name is None:
+            mdate_name='mdate'
+        command_line = "self.data=self.tejapi.get(dataset_name,coid=query_coid,"
+        command_line+= mdate_name+"={'gte':mdate_down,'lte':mdate_up},"
+        command_line+= "opts={'sort':'"+mdate_name+".desc','columns':query_columns}, paginate=True)"
+        command_line+= ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"
+        context = {"self":self, "__name__": "__main__",
+                   "dataset_name":dataset_name,"query_coid":query_coid,
+                   "mdate_down":mdate_down,"mdate_up":mdate_up,
+                   "query_columns":query_columns}
+        exec(command_line, context)
+
+        #data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
+        self.data['zdate'] = self.data['zdate'].astype(str).astype('datetime64')
         if rename_columns is not None:
             print(rename_columns)
-            data = data.rename(index=str, columns=rename_columns)
-        return data
-    def get_table_cname(self,table_name='TWN/APRCD',language='cname'):
-        if self.table_info.get(table_name) is None:
-            table_info = self.tejapi.table_info(table_name)
+            self.data = self.data.rename(index=str, columns=rename_columns)
+
+        return self.data
+    def get_table_cname(self,market='TWN',table_name='APRCD',language='cname'):
+        dataset_name = market+'/'+table_name
+        if self.table_info.get(dataset_name) is None:
+            table_info = self.tejapi.table_info(dataset_name)
             table_info['columns_cname'] = [ cols['cname'] for cols in table_info['columns'].values()]
             table_info['columns_name'] = [ cols['name'] for cols in table_info['columns'].values()]
-            self.table_info[table_name] = table_info
-        return self.table_info[table_name]['name']
+            self.table_info[dataset_name] = table_info
+        return self.table_info[dataset_name]['name']
 
-    def compare_column_name(self,table_name,query_columns,kind='cname'):
-        table_cname = self.get_table_cname(table_name=table_name)
-        all_columns = self.table_info[table_name]['columns']
+    def compare_column_name(self,market,table_name,query_columns,kind='cname'):
+        table_cname = self.get_table_cname(market=market,table_name=table_name)
+        dataset_name = market+'/'+table_name
+        all_columns = self.table_info[dataset_name]['columns']
         ans_code = []
         ans_name = []
         for column in all_columns:
@@ -49,9 +67,10 @@ class query_base(object):
             print('lack columns:')
             print(left_name)
         return ans_code,ans_name
-    def get_column_name(self,table_name='TWN/APRCD',language='cname'):
-        table_cname = self.get_table_cname(table_name=table_name)
-        table_info = self.table_info.get(table_name)
+    def get_column_name(self,market='TWN',table_name='APRCD',language='cname'):
+        dataset_name = market+'/'+table_name
+        table_cname = self.get_table_cname(market=market,table_name=table_name)
+        table_info = self.table_info.get(dataset_name)
         return {'columns_cname':table_info['columns_cname'],'columns_name':table_info['columns_name']}
     def set_listed_coid(self,df):
         listed_coids = self.basic_info.loc[self.basic_info['list_day1']<=self.current_zdate,'coid'].values.tolist()
@@ -70,6 +89,8 @@ class query_base(object):
                 window = int(window.replace('m',''))
             jump_length = window if peer_future is False else -1*window
             next_base_date = self.cal_zdate(base_date=base_date,jump_length=jump_length,jump_kind=this_window_type,tradeday=tradeday)
+        next_base_date = numpy.array([next_base_date]).astype('datetime64')[0]
+
         return this_window_type,next_base_date
     def get_activedate_data(self,window,column_names,peer_future=False,base_date=None,base_mdate=None,clue_length=None,keep='first'):
         current_data = None
