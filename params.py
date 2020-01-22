@@ -27,7 +27,7 @@ benchmark_id = 'Y9997'
 back_date_list = None
 market = 'TWN'
 
-all_prc_dataset = ['APRCD','AFF_RAW','AMT1','ABSTN']
+all_prc_dataset = ['APRCD','AFF_RAW','AMT1','ABSTN1','ASALE']
 mdate_name_dict = {"ASALE":"annd_s"}
 data = pandas.DataFrame(columns=['zdate','coid'])
 show_coid = '2330'

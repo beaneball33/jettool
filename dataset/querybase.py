@@ -15,14 +15,19 @@ class query_base(object):
     def get_info(self):
         info = self.tejapi.ApiConfig.info()
         return info
-    def query_data_with_date_coid(self,market='TWN',table_name='APRCD',query_coid=['2330'],mdate_up='2019-12-31',mdate_down='2018-12-31',query_columns=['coid','mdate'],rename_columns=None):
+    def query_data_with_date_coid(self,
+            market='TWN',table_name='APRCD',query_coid=['2330'],
+            mdate_up='2019-12-31',mdate_down='2018-12-31',
+            query_columns=['coid','mdate'],rename_columns=None):
+            
         dataset_name = market+'/'+table_name
-        query_columns = list(set(query_columns + ['coid','mdate']))
-        self.data = None
+        
+        self.tempdata = None
         mdate_name = self.mdate_name_dict.get(table_name)
         if mdate_name is None:
             mdate_name='mdate'
-        command_line = "self.data=self.tejapi.get(dataset_name,coid=query_coid,"
+        query_columns = list(set(query_columns + ['coid',mdate_name]))
+        command_line = "self.tempdata=self.tejapi.get(dataset_name,coid=query_coid,"
         command_line+= mdate_name+"={'gte':mdate_down,'lte':mdate_up},"
         command_line+= "opts={'sort':'"+mdate_name+".desc','columns':query_columns}, paginate=True)"
         command_line+= ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"
@@ -33,18 +38,20 @@ class query_base(object):
         exec(command_line, context)
 
         #data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
-        self.data['zdate'] = self.data['zdate'].astype(str).astype('datetime64')
+        self.tempdata['zdate'] = self.tempdata['zdate'].astype(str).astype('datetime64')
         if rename_columns is not None:
             print(rename_columns)
-            self.data = self.data.rename(index=str, columns=rename_columns)
+            self.tempdata = self.tempdata.rename(index=str, columns=rename_columns)
 
-        return self.data
+        return self.tempdata
     def get_table_cname(self,market='TWN',table_name='APRCD',language='cname'):
         dataset_name = market+'/'+table_name
         if self.table_info.get(dataset_name) is None:
             table_info = self.tejapi.table_info(dataset_name)
-            table_info['columns_cname'] = [ cols['cname'] for cols in table_info['columns'].values()]
-            table_info['columns_name'] = [ cols['name'] for cols in table_info['columns'].values()]
+            table_info['columns_cname'] = [ 
+                cols['cname'] for cols in table_info['columns'].values()]
+            table_info['columns_name'] = [
+                cols['name'] for cols in table_info['columns'].values()]
             self.table_info[dataset_name] = table_info
         return self.table_info[dataset_name]['name']
 
@@ -71,11 +78,16 @@ class query_base(object):
         dataset_name = market+'/'+table_name
         table_cname = self.get_table_cname(market=market,table_name=table_name)
         table_info = self.table_info.get(dataset_name)
-        return {'columns_cname':table_info['columns_cname'],'columns_name':table_info['columns_name']}
+        return {'columns_cname':table_info['columns_cname'],
+                'columns_name':table_info['columns_name']}
     def set_listed_coid(self,df):
-        listed_coids = self.basic_info.loc[self.basic_info['list_day1']<=self.current_zdate,'coid'].values.tolist()
+        listed_coids = self.basic_info.loc[
+                                       self.basic_info['list_day1']<=self.current_zdate,'coid'
+                                       ].values.tolist()
         self.current_coids = df.loc[(df['zdate']==self.current_zdate),['zdate','coid']]
-        self.listed_coids = df.loc[(df['zdate']==self.current_zdate)&(df['coid'].isin(listed_coids)),'coid'].values.tolist()    
+        self.listed_coids = df.loc[
+            (df['zdate']==self.current_zdate)&(df['coid'].isin(listed_coids)),'coid'
+            ].values.tolist()    
     def cal_zdate_by_window(self,window,base_date,peer_future=False,tradeday=True):
         if 'q' not in window:
             if 'd'  in window:
@@ -88,11 +100,17 @@ class query_base(object):
                 this_window_type = 'M'
                 window = int(window.replace('m',''))
             jump_length = window if peer_future is False else -1*window
-            next_base_date = self.cal_zdate(base_date=base_date,jump_length=jump_length,jump_kind=this_window_type,tradeday=tradeday)
+            next_base_date = self.cal_zdate(
+                                  base_date=base_date,jump_length=jump_length,
+                                  jump_kind=this_window_type,tradeday=tradeday)
         next_base_date = numpy.array([next_base_date]).astype('datetime64')[0]
 
         return this_window_type,next_base_date
-    def get_activedate_data(self,window,column_names,peer_future=False,base_date=None,base_mdate=None,clue_length=None,keep='first'):
+    def get_activedate_data(self,
+            window,column_names,peer_future=False,
+            base_date=None,base_mdate=None
+            ,clue_length=None,keep='first'):
+            
         current_data = None
         column_names = ['zdate','mdate','coid']+column_names
         df = self.all_date_data
@@ -105,12 +123,20 @@ class query_base(object):
             elif base_date is not None:
                 base_date =numpy.array([base_date]).astype('datetime64')[0]
 
-            this_window_type,next_base_date = self.cal_zdate_by_window(window=window,base_date=base_date,peer_future=peer_future)
+            this_window_type,next_base_date = self.cal_zdate_by_window(
+                                                   window=window,base_date=base_date,
+                                                   peer_future=peer_future)
 
             if pandas.to_datetime(base_date).strftime('%Y-%m-%d')==next_base_date:
-                current_data = df.loc[(df['zdate']<=base_date)&(df['zdate']>=next_base_date),column_names]
+            
+                current_data = df.loc[
+                                 (df['zdate']<=base_date)&(df['zdate']>=next_base_date),
+                                 column_names]
+                                 
                 current_data['temp_d'] = (base_date - current_data['zdate']) / numpy.timedelta64(1, 'D')
-                current_data = current_data.sort_values(by=['coid','zdate']).reset_index(drop=True).drop(columns=['temp_d'])
+                current_data = current_data.sort_values(by=['coid','zdate']
+                                            ).reset_index(drop=True
+                                            ).drop(columns=['temp_d'])
             elif peer_future is False:
                 current_data = df.loc[(df['zdate']<=base_date)&(df['zdate']>next_base_date),column_names]
                 current_data['temp_d'] = (base_date - current_data['zdate']) / numpy.timedelta64(1, 'D')
@@ -131,7 +157,9 @@ class query_base(object):
 
             this_window_type = 'Q'
             #決定用來篩選的日期遮罩
-            this_datefilter = pandas.DataFrame(self.all_mdate_list,columns=['mdate']).sort_values(by=['mdate'],ascending=False)
+            this_datefilter = pandas.DataFrame(
+                                     self.all_mdate_list,columns=['mdate']
+                                     ).sort_values(by=['mdate'],ascending=False)
             if peer_future is False:
                 this_datefilter = this_datefilter[this_datefilter['mdate']<=base_mdate]
                 this_datefilter = this_datefilter.values[0:window+clue_length].flatten()
@@ -139,7 +167,9 @@ class query_base(object):
                 down_date = this_datefilter[len(this_datefilter)-1]
             else:
                 this_datefilter = this_datefilter[this_datefilter['mdate']>=base_mdate]
-                this_datefilter = this_datefilter.values[len(this_datefilter)-1-window:len(this_datefilter)].flatten()
+                this_datefilter = this_datefilter.values[
+                                                  len(this_datefilter)-1-window:len(this_datefilter)
+                                                  ].flatten()
                 up_date = this_datefilter[0]
                 down_date = this_datefilter[len(this_datefilter)-1]
 
@@ -149,10 +179,17 @@ class query_base(object):
             current_data['temp_d'] = (base_mdate - current_data['mdate']) / numpy.timedelta64(1, 'D')
             if peer_future is False:
                 current_data = current_data[(current_data['mdate']<=base_mdate)]
-                current_data = current_data.sort_values(by=['coid','mdate']).drop_duplicates(subset=['coid','mdate'],keep='first').drop(columns=['temp_d'])
+                current_data = current_data.sort_values(by=['coid','mdate']
+                                            ).drop_duplicates(subset=['coid','mdate'],keep='first'
+                                            ).drop(columns=['temp_d'])
             else:
-                current_data = current_data.sort_values(by=['coid','temp_d']).drop_duplicates(subset=['coid','mdate'],keep='first').drop(columns=['temp_d'])
+                current_data = current_data.sort_values(by=['coid','temp_d']
+                                           ).drop_duplicates(subset=['coid','mdate'],keep='first'
+                                           ).drop(columns=['temp_d'])
         
-        current_data = current_data.loc[current_data['coid'].isin(self.listed_coids),current_data.columns].reset_index(drop=True)
-        current_data[column_names] = current_data[column_names].replace([numpy.inf, -numpy.inf], numpy.nan)
+        current_data = current_data.loc[
+                                    current_data['coid'].isin(self.listed_coids),
+                                    current_data.columns].reset_index(drop=True)
+        current_data[column_names] = current_data[column_names].replace(
+                                                                [numpy.inf, -numpy.inf], numpy.nan)
         return current_data ,this_window_type, window

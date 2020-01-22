@@ -72,6 +72,7 @@ class listed_stock(querybase.query_base):
                 prc_basedate = prc_basedate.append(this_prc_basedate,sort=False)
         return prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
     def get_dailydata(self,query_coids=None,base_startdate='2015-12-31',base_date='2019-12-31'):
+
         query_column = ['mdate','coid','close_d','open_d','high_d','low_d','roib','mv','tej_cdiv']
         rename_column = {'mdate':'zdate','close_d':'股價','open_d':'開盤價',
             'high_d':'最高價','low_d':'最低價','mv':'市值','roib':'報酬率','tej_cdiv':'現金股利率'}
