@@ -17,9 +17,11 @@ class query_base(object):
         return info
     def set_data_attr(self):
         self.data_attr = {'datastart_date':str(self.datastart_date),'dataend_date':str(self.dataend_date)}
-    def get_query_interval(self,dataend_date,datastart_date):
-        #日期非一致，代表無有效資料
+    def get_query_interval(self):
+        dataend_date = numpy.datetime64(self.data_attr.get('dataend_date')) 
+        datastart_date = numpy.datetime64(self.data_attr.get('datastart_date')) 
         job_list = []
+
         if self.dataend_date > dataend_date:
             #代表目前資料的迄日早於新的迄日，要補上次迄日到本次迄日間資料
             job_list = job_list +[{'mdate_up':self.dataend_date,'mdate_down':self.dataend_date}]
@@ -126,12 +128,14 @@ class query_base(object):
         current_data = None
         column_names = ['zdate','mdate','coid']+column_names
         df = self.all_date_data
-
+        if self.all_date_data is None:
+            df = self.prc_basedate
+            
         if 'q' not in window:
             if clue_length is None:
                 clue_length = 0
             if base_date is None:
-                base_date = str(self.current_zdate)
+                base_date = self.current_zdate
             elif base_date is not None:
                 base_date =numpy.array([base_date]).astype('datetime64')[0]
 
@@ -139,24 +143,15 @@ class query_base(object):
                                                    window=window,base_date=base_date,
                                                    peer_future=peer_future)
 
-            if pandas.to_datetime(base_date).strftime('%Y-%m-%d')==next_base_date:
-            
-                current_data = df.loc[
-                                 (df['zdate']<=base_date)&(df['zdate']>=next_base_date),
-                                 column_names]
-                                 
-                current_data['temp_d'] = (base_date - current_data['zdate']) / numpy.timedelta64(1, 'D')
-                current_data = current_data.sort_values(by=['coid','zdate']
-                                            ).reset_index(drop=True
-                                            ).drop(columns=['temp_d'])
+            if base_date==next_base_date:
+                current_data = df.loc[(df['zdate']==next_base_date),column_names]
             elif peer_future is False:
                 current_data = df.loc[(df['zdate']<=base_date)&(df['zdate']>next_base_date),column_names]
-                current_data['temp_d'] = (base_date - current_data['zdate']) / numpy.timedelta64(1, 'D')
-                current_data = current_data.sort_values(by=['coid','zdate']).drop(columns=['temp_d'])
             else:
                 current_data = df.loc[(df['zdate']>base_date)&(df['zdate']<=next_base_date),column_names]
-                current_data['temp_d'] = (base_date - current_data['zdate']) / numpy.timedelta64(1, 'D')
-                current_data = current_data.sort_values(by=['coid','temp_d']).drop(columns=['temp_d'])
+            current_data['temp_d'] = (base_date - current_data['zdate']) / numpy.timedelta64(1, 'D')
+            current_data = current_data.sort_values(by=['coid','temp_d']).drop(columns=['temp_d'])
+
         else:
             if clue_length is None:
                 clue_length = 2

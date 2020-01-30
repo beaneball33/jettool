@@ -30,12 +30,12 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
             base_date = self.dataend_date
         else:
             #若使用者代的base_date超過範圍，必須校正
-            self.dataend_date = base_date
+            self.dataend_date = numpy.datetime64(base_date) 
         this_window_type,self.datastart_date = self.cal_zdate_by_window(window=window,
                                                                         base_date=self.dataend_date,
                                                                         tradeday=False)
+
         self.check_initial_data(mkts=mkts)        
-        
         
         #處理查詢欄位名稱
         column_names = list(set(column_names)) 
@@ -80,9 +80,8 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         merge_prc_basedate = None
         append_list = []
         
-        dataend_date = self.data_attr.get('dataend_date')
-        datastart_date = self.data_attr.get('datastart_date')
-        part_query_interval = self.get_query_interval(dataend_date,datastart_date)
+
+        part_query_interval = self.get_query_interval()
         full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
         for table_name in self.all_prc_dataset:
@@ -139,7 +138,7 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
                     prc_basedate = prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
                     
         if self.prc_basedate is None:
-            self.prc_basedate = prc_basedate.merge(merge_prc_basedate,on=['zdate','coid'],how='left')
+            self.prc_basedate = prc_basedate
         else:
             #先進行append，再進行merge
             #要分段append，避免重複
@@ -151,7 +150,8 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
                 self.prc_basedate = self.prc_basedate.append(temp_data,sort=False)
             self.prc_basedate = self.prc_basedate.drop_duplicates(subset=['coid','zdate'],keep='last')
             self.prc_basedate = self.prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
-            self.prc_basedate = self.prc_basedate.merge(merge_prc_basedate,on=['zdate','coid'],how='left')
+            if merge_prc_basedate is not None:
+                self.prc_basedate = self.prc_basedate.merge(merge_prc_basedate,on=['zdate','coid'],how='left')
             
     def get_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
         print('查詢財報資料')
@@ -202,10 +202,12 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         else:
             dir_name = os.path.dirname(file_path)
         file_name = os.path.join(dir_name, "prc_basedate.pkl")
-        self.prc_basedate = pandas.read_pickle(file_name)
+        if os.path.isfile(file_name):
+            self.prc_basedate = pandas.read_pickle(file_name)
         
         file_name = os.path.join(dir_name, "findata_all.pkl")
-        self.findata_all = pandas.read_pickle(file_name)
+        if os.path.isfile(file_name):
+            self.findata_all = pandas.read_pickle(file_name)
 
         file_name = os.path.join(dir_name, "data_attr.json")
         with open(file_name) as f:
