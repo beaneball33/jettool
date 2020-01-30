@@ -9,33 +9,33 @@
 """
 from . import params
 from . import dataset
-import jettool.dataset
 from .dataset import finreport
 from .dataset import listedstock
 from .pipeline import backtest
 import os
 import numpy
-
+import inspect
+import json
+import pandas
 class financial_tool(finreport.financial_report,listedstock.listed_stock,backtest.backtest_base):
     def __init__(self):
         for name in params.__dict__:
             if '__' not in name and not callable(params.__dict__.get(name)):   
                 self.__dict__[name] = params.__dict__.get(name)
-
-    def get_data(self,window,column_names,base_date=None,mkts=['TSE']):
+        self.load_data()
+    def get_data(self,window,column_names,base_date=None,mkts=['TSE','OTC']):
          
         #自動化處理觀測日期base_date=current_zdate
         if base_date is None:
-            base_date = self.current_zdate
+            base_date = self.dataend_date
         else:
             #若使用者代的base_date超過範圍，必須校正
-            self.current_zdate = base_date
+            self.dataend_date = base_date
         this_window_type,self.datastart_date = self.cal_zdate_by_window(window=window,
-                                                                        base_date=self.current_zdate,
+                                                                        base_date=self.dataend_date,
                                                                         tradeday=False)
         self.check_initial_data(mkts=mkts)        
-        #產生標準交易日期資料
-        self.prc_basedate = self.create_prc_base()
+        
         
         #處理查詢欄位名稱
         column_names = list(set(column_names)) 
@@ -52,6 +52,8 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         #逐一檢查可查詢日資料清單
         self.get_price_data(prc_name=left_name)
         
+        #查詢完畢，更新設定值
+        self.set_data_attr()
         
         if self.all_date_data is None and self.prc_basedate is not None and self.findata_all is not None:
             self.set_back_test(back_interval=[1,-1])
@@ -69,36 +71,88 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         if self.input_coids is None:
             self.get_basicdata(mkts=mkts,base_startdate=self.datastart_date)           
         #取得標準交易日期資料
-        self.get_benchmark(base_startdate=self.datastart_date,base_date=self.current_zdate)
-        
-    def get_price_data(self,mkts=['TSE','OTC'],prc_name=[]):
-        print('查詢日資料 最大資料日期:'+str(self.current_zdate))
-        for table_name in self.all_prc_dataset:
-            
-            available_items = self.get_column_name(market=self.market,table_name=table_name)
-            available_cname = available_items.get('columns_cname')
-            available_cname = numpy.intersect1d(prc_name,available_cname).tolist()
-            prc_name = numpy.setdiff1d(prc_name, available_cname).tolist()
+        self.get_benchmark(base_startdate=self.datastart_date,base_date=self.dataend_date)
 
-            if len(available_cname)>0:
-                available_code,available_cname = self.compare_column_name(market=self.market,
-                                                                          table_name=table_name,
-                                                                          query_columns=available_cname)
-                                                                          
-                rename_set = { available_code[i]:available_cname[i] for i in range(0,len(available_code))}
-                table_cname = self.get_table_cname(market=self.market,table_name=table_name)
-                print(''.join(table_cname))            
-                
-                queried_data = self.query_data_with_date_coid(market=self.market,
-                                                              table_name=table_name,
-                                                              query_coid=self.input_coids,
-                                                              mdate_up=self.current_zdate,
-                                                              mdate_down=self.datastart_date,
-                                                              query_columns=available_code,
-                                                              rename_columns=rename_set)
-                if len(queried_data)>0:
-                    self.prc_basedate = self.prc_basedate.merge(queried_data,on=['zdate','coid'],how='left')
+    def get_price_data(self,mkts=['TSE','OTC'],prc_name=[]):
+        print('查詢日資料 最大資料日期:'+str(self.dataend_date))
+        #產生標準交易日期資料
+        prc_basedate = self.create_prc_base()
+        merge_prc_basedate = None
+        append_list = []
         
+        dataend_date = self.data_attr.get('dataend_date')
+        datastart_date = self.data_attr.get('datastart_date')
+        part_query_interval = self.get_query_interval(dataend_date,datastart_date)
+        full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
+        
+        for table_name in self.all_prc_dataset:
+            job_list = part_query_interval
+            temp_data = None
+            merge_all = False
+            if self.prc_basedate is not None:
+                #未在原資料集內的名稱，整個重查
+                if table_name in self.prc_basedate.columns.tolist():
+                    merge_all = True            
+                    job_list = full_query_interval
+                    
+
+
+            for data_interval in job_list:
+                available_items = self.get_column_name(market=self.market,table_name=table_name)
+                available_cname = available_items.get('columns_cname')
+                available_cname = numpy.intersect1d(prc_name,available_cname).tolist()
+                prc_name = numpy.setdiff1d(prc_name, available_cname).tolist()
+            
+                if len(available_cname)>0:
+
+                    available_code,available_cname = self.compare_column_name(market=self.market,
+                                                                              table_name=table_name,
+                                                                              query_columns=available_cname)
+                    mdate_up = data_interval['mdate_up']     
+                    mdate_down=data_interval['mdate_down']                    
+                    rename_set = { available_code[i]:available_cname[i] for i in range(0,len(available_code))}
+                    table_cname = self.get_table_cname(market=self.market,table_name=table_name)
+                    print(''.join(table_cname))            
+                    if merge_all is False:
+                        append_list = append_list + available_cname                    
+                    queried_data = self.query_data_with_date_coid(market=self.market,
+                                                                  table_name=table_name,
+                                                                  query_coid=self.input_coids,
+                                                                  mdate_up=mdate_up,
+                                                                  mdate_down=mdate_down,
+                                                                  query_columns=available_code,
+                                                                  rename_columns=rename_set)
+                                
+                    if len(queried_data)>0:
+                        if temp_data is None:
+                            temp_data = queried_data
+                        else:
+                            temp_data = temp_data.append(queried_data,sort=False)
+            #各日期查詢完畢 開始組裝            
+            if temp_data is not None:
+                if merge_all is True:
+                    if merge_prc_basedate is None:
+                        merge_prc_basedate = temp_data
+                    else:
+                        merge_prc_basedate = merge_prc_basedate.merge(temp_data,on=['zdate','coid'])
+                else:
+                    prc_basedate = prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
+                    
+        if self.prc_basedate is None:
+            self.prc_basedate = prc_basedate.merge(merge_prc_basedate,on=['zdate','coid'],how='left')
+        else:
+            #先進行append，再進行merge
+            #要分段append，避免重複
+            append_columns = ['zdate','coid'] + append_list
+            for data_interval in part_query_interval:
+                temp_data = prc_basedate.loc[(prc_basedate['zdate']<data_interval['mdate_up'])&
+                                            (prc_basedate['zdate']>=data_interval['mdate_down']),
+                                            append_columns]
+                self.prc_basedate = self.prc_basedate.append(temp_data,sort=False)
+            self.prc_basedate = self.prc_basedate.drop_duplicates(subset=['coid','zdate'],keep='last')
+            self.prc_basedate = self.prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
+            self.prc_basedate = self.prc_basedate.merge(merge_prc_basedate,on=['zdate','coid'],how='left')
+            
     def get_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
         print('查詢財報資料')
         
@@ -128,3 +182,31 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
                 else:
                     cname_outcome = numpy.append(cname_outcome,cname_outcome_temp)
         return cname_outcome
+
+    def save_data(self):
+        dir_name = os.path.dirname(inspect.getfile(dataset))
+        if self.prc_basedate is not None:
+            file_name = os.path.join(dir_name, "prc_basedate.pkl")
+            self.prc_basedate.to_pickle(file_name)
+            
+        if self.findata_all is not None:
+            file_name = os.path.join(dir_name, "findata_all.pkl")
+            self.findata_all.to_pickle(file_name)
+            
+        file_name = os.path.join(dir_name, "data_attr.json")
+        with open(file_name, 'w') as f:
+            json.dump(self.data_attr, f)   
+    def load_data(self,file_path=None):
+        if file_path is None:
+            dir_name = os.path.dirname(inspect.getfile(dataset))
+        else:
+            dir_name = os.path.dirname(file_path)
+        file_name = os.path.join(dir_name, "prc_basedate.pkl")
+        self.prc_basedate = pandas.read_pickle(file_name)
+        
+        file_name = os.path.join(dir_name, "findata_all.pkl")
+        self.findata_all = pandas.read_pickle(file_name)
+
+        file_name = os.path.join(dir_name, "data_attr.json")
+        with open(file_name) as f:
+            self.data_attr = json.load(f)  

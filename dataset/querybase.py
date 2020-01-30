@@ -15,6 +15,18 @@ class query_base(object):
     def get_info(self):
         info = self.tejapi.ApiConfig.info()
         return info
+    def set_data_attr(self):
+        self.data_attr = {'datastart_date':str(self.datastart_date),'dataend_date':str(self.dataend_date)}
+    def get_query_interval(self,dataend_date,datastart_date):
+        #日期非一致，代表無有效資料
+        job_list = []
+        if self.dataend_date > dataend_date:
+            #代表目前資料的迄日早於新的迄日，要補上次迄日到本次迄日間資料
+            job_list = job_list +[{'mdate_up':self.dataend_date,'mdate_down':self.dataend_date}]
+        if self.datastart_date < datastart_date:
+            #代表目前資料的起日於新的迄日，要補本次起日到上次起日間資料
+            job_list = job_list +[{'mdate_up':datastart_date,'mdate_down':self.dataend_date}]
+        return job_list
     def query_data_with_date_coid(self,
             market='TWN',table_name='APRCD',query_coid=['2330'],
             mdate_up='2019-12-31',mdate_down='2018-12-31',
