@@ -119,7 +119,7 @@ class query_base(object):
                                   jump_kind=this_window_type,tradeday=tradeday)
         next_base_date = numpy.array([next_base_date]).astype('datetime64')[0]
 
-        return this_window_type,next_base_date
+        return this_window_type,next_base_date,window
     def get_activedate_data(self,
             window,column_names,peer_future=False,
             base_date=None,base_mdate=None
@@ -139,7 +139,7 @@ class query_base(object):
             elif base_date is not None:
                 base_date =numpy.array([base_date]).astype('datetime64')[0]
 
-            this_window_type,next_base_date = self.cal_zdate_by_window(
+            this_window_type,next_base_date,window = self.cal_zdate_by_window(
                                                    window=window,base_date=base_date,
                                                    peer_future=peer_future)
 

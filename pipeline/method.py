@@ -1,6 +1,8 @@
 import pandas
 import numpy
 from datetime import datetime, date, timedelta
+import time 
+import traceback
 class method_base(object):
 
     def calculate_maxdrawback(self,window=None,col_type=True,df=None):
