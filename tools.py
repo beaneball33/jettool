@@ -147,16 +147,15 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
             #要分段append，避免重複
             append_columns = ['zdate','coid'] + self.append_list
             for data_interval in part_query_interval:
-                temp_data = prc_basedate.loc[(prc_basedate['zdate']<data_interval['mdate_up'])&
-                                            (prc_basedate['zdate']>=data_interval['mdate_down']),
+                temp_data = merge_prc_basedate.loc[(merge_prc_basedate['zdate']<data_interval['mdate_up'])&
+                                            (merge_prc_basedate['zdate']>=data_interval['mdate_down']),
                                             append_columns]
                 self.prc_basedate = self.prc_basedate.append(temp_data,sort=False)
             self.prc_basedate = self.prc_basedate.drop_duplicates(subset=['coid','zdate'],keep='last')
             self.prc_basedate = self.prc_basedate.sort_values(by=['coid','zdate'],
                                                               ascending=True).reset_index(drop=True)
-        if merge_prc_basedate is not None:
-            self.merge_prc_basedate = merge_prc_basedate
-            self.prc_basedate = self.prc_basedate.merge(merge_prc_basedate,
+
+            self.prc_basedate = prc_basedate.merge(self.prc_basedate,
                                                         on=['zdate','coid'],how='left')
             
     def get_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
