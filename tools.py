@@ -34,7 +34,7 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         this_window_type,self.datastart_date,window_int = self.cal_zdate_by_window(window=window,
                                                                         base_date=self.dataend_date,
                                                                         tradeday=False)
-
+        print('資料起始日：'+str(self.datastart_date))
         self.check_initial_data(mkts=mkts)        
         
         #處理查詢欄位名稱
@@ -77,44 +77,46 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         print('查詢日資料 最大資料日期:'+str(self.dataend_date))
         #產生標準交易日期資料
         prc_basedate = self.create_prc_base()
-        merge_prc_basedate = None
-        append_list = []
+        merge_prc_basedate = prc_basedate.reindex(columns=['coid','zdate']).copy()
+        self.append_list = []
         
 
-        part_query_interval = self.get_query_interval()
-        full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
+        self.part_query_interval = self.get_query_interval()
+        self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
         for table_name in self.all_prc_dataset:
-            job_list = part_query_interval
+            job_list = self.full_query_interval
             temp_data = None
-            merge_all = False
+            merge_all = True
             if self.prc_basedate is not None:
                 #未在原資料集內的名稱，整個重查
-                if table_name in self.prc_basedate.columns.tolist():
-                    merge_all = True            
-                    job_list = full_query_interval
-                    
-
-
-            for data_interval in job_list:
-                available_items = self.get_column_name(market=self.market,table_name=table_name)
-                available_cname = available_items.get('columns_cname')
-                available_cname = numpy.intersect1d(prc_name,available_cname).tolist()
-                prc_name = numpy.setdiff1d(prc_name, available_cname).tolist()
+                if table_name  in self.prc_basedate.columns.tolist():
+                    merge_all =  False           
+                    job_list = self.part_query_interval
             
-                if len(available_cname)>0:
+            available_items = self.get_column_name(market=self.market,table_name=table_name)
+            available_cname = available_items.get('columns_cname')
+            available_cname = numpy.intersect1d(prc_name,available_cname).tolist()
+            prc_name = numpy.setdiff1d(prc_name, available_cname).tolist()
+                
+            if len(available_cname)>0:
 
-                    available_code,available_cname = self.compare_column_name(market=self.market,
-                                                                              table_name=table_name,
-                                                                              query_columns=available_cname)
+                available_code,available_cname = self.compare_column_name(market=self.market,
+                                                                          table_name=table_name,
+                                                                          query_columns=available_cname)
+                rename_set = { available_code[i]:available_cname[i] 
+                                   for i in range(0,len(available_code))}      
+                                   
+                table_cname = self.get_table_cname(market=self.market,table_name=table_name)
+                print(''.join(table_cname)) 
+                print('重新查詢:'+str(merge_all))    
+                for data_interval in job_list:
                     mdate_up = data_interval['mdate_up']     
                     mdate_down=data_interval['mdate_down']                    
-                    rename_set = { available_code[i]:available_cname[i] 
-                                   for i in range(0,len(available_code))}
-                    table_cname = self.get_table_cname(market=self.market,table_name=table_name)
-                    print(''.join(table_cname))            
+
+                    print(data_interval)                    
                     if merge_all is False:
-                        append_list = append_list + available_cname                    
+                        self.append_list = self.append_list + available_cname                    
                     queried_data = self.query_data_with_date_coid(market=self.market,
                                                                   table_name=table_name,
                                                                   query_coid=self.input_coids,
@@ -122,28 +124,28 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
                                                                   mdate_down=mdate_down,
                                                                   query_columns=available_code,
                                                                   rename_columns=rename_set)
+                    
                                 
                     if len(queried_data)>0:
+
                         if temp_data is None:
                             temp_data = queried_data
                         else:
                             temp_data = temp_data.append(queried_data,sort=False)
+
             #各日期查詢完畢 開始組裝            
             if temp_data is not None:
-                if merge_all is True:
-                    if merge_prc_basedate is None:
-                        merge_prc_basedate = temp_data
-                    else:
-                        merge_prc_basedate = merge_prc_basedate.merge(temp_data,on=['zdate','coid'])
+                if merge_all is False:
+                    merge_prc_basedate = merge_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
                 else:
                     prc_basedate = prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
-                    
+ 
         if self.prc_basedate is None:
             self.prc_basedate = prc_basedate
         else:
             #先進行append，再進行merge
             #要分段append，避免重複
-            append_columns = ['zdate','coid'] + append_list
+            append_columns = ['zdate','coid'] + self.append_list
             for data_interval in part_query_interval:
                 temp_data = prc_basedate.loc[(prc_basedate['zdate']<data_interval['mdate_up'])&
                                             (prc_basedate['zdate']>=data_interval['mdate_down']),
@@ -152,9 +154,10 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
             self.prc_basedate = self.prc_basedate.drop_duplicates(subset=['coid','zdate'],keep='last')
             self.prc_basedate = self.prc_basedate.sort_values(by=['coid','zdate'],
                                                               ascending=True).reset_index(drop=True)
-            if merge_prc_basedate is not None:
-                self.prc_basedate = self.prc_basedate.merge(merge_prc_basedate,
-                                                            on=['zdate','coid'],how='left')
+        if merge_prc_basedate is not None:
+            self.merge_prc_basedate = merge_prc_basedate
+            self.prc_basedate = self.prc_basedate.merge(merge_prc_basedate,
+                                                        on=['zdate','coid'],how='left')
             
     def get_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
         print('查詢財報資料')

@@ -326,8 +326,7 @@ class backtest_base(method.method_base):
         if import_data is not None:
             self.all_date_data = self.all_date_data.merge(import_data,on=['coid','zdate'],how='left')
             
-        self.all_date_data['股價'] = self.all_date_data['收盤價(元)'] 
-        self.all_date_data['報酬率'] = self.all_date_data['報酬率-Ln']
+        self.all_date_data = self.all_date_data.rename(columns={"收盤價(元)": "股價", "報酬率-Ln": "報酬率"})
     def do_outputfile(self):
         temp_output_list = self.all_date_data.columns.tolist()
         for code in self.indicator_attr:
