@@ -77,7 +77,7 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         print('查詢日資料 最大資料日期:'+str(self.dataend_date))
         #產生標準交易日期資料
         self.partquery_prc_basedate = self.create_prc_base()
-        self.merge_prc_basedate = self.partquery_prc_basedate.reindex(columns=['coid','zdate']).copy()
+        self.fullquery_prc_basedate = self.partquery_prc_basedate.reindex(columns=['coid','zdate']).copy()
         self.append_list = []
         
 
@@ -102,7 +102,8 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
                         full_query =  True           
                         job_list = self.full_query_interval
                         self.append_list = self.append_list + [col_name]
-                    
+            else:
+                full_query = True
             if len(available_cname)>0:
 
                 available_code,available_cname = self.compare_column_name(market=self.market,
@@ -140,7 +141,7 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
             #各日期查詢完畢 開始組裝            
             if temp_data is not None:
                 if full_query is True:
-                    self.fullquery_prc_basedate = self.merge_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
+                    self.fullquery_prc_basedate = self.fullquery_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
                 else:
                     self.partquery_prc_basedate = self.partquery_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
  
