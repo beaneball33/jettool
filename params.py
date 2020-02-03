@@ -15,9 +15,11 @@ back_length = 365
 query_length = 365*2
 
 current_zdate  = numpy.datetime64('today') 
-datastart_date = current_zdate - numpy.timedelta64(query_length,'D')
+dataend_date  = numpy.datetime64('today') 
+datastart_date = dataend_date 
 backstart_date = current_zdate - numpy.timedelta64(back_length,'D')
 
+data_attr = {'datastart_date':str(datastart_date),'dataend_date':str(dataend_date)}
 
 coid_length_index = 300
 input_coids = None

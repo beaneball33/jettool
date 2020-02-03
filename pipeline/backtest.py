@@ -1,7 +1,10 @@
 ﻿import numpy
 import pandas
 from . import method
-
+import time 
+import os
+import tempfile
+import contextlib
 
 class backtest_base(method.method_base):
     def get_back_test_index(self,back_interval):
@@ -208,7 +211,23 @@ class backtest_base(method.method_base):
         print('投資組合標準差:'+str(self.portfolio_std))
         print('績效指標標準差:'+str(self.benchmark_std))
         print('最大回撤率:'+str(self.maxdrawback))
-    def back_test(self,back_interval=None,import_data=None,keep_data=False,cash=1000000):
+    def exec_lines(self,lines):
+        fd, name = tempfile.mkstemp(suffix=".py")
+
+        with open(fd, "r+", encoding='utf-8') as f:
+            for line in lines:
+                f.write(line)
+                f.write("\n")
+            f.seek(0)
+            source = f.read()
+
+        context = {"tejtool": self, "__file__": name, "__name__": "__main__"}
+        try:
+            exec(compile(source, name, "exec"), context)
+        finally:
+            with contextlib.suppress(OSError):
+                os.remove(name)
+    def back_test(self,back_interval=None,import_data=None,keep_data=False,cash=1000000,calculate=[],evaluate=[]):
         print('跨股模型計算與回顧測試')
         t0 = time.time()
         self.set_back_test(back_interval,import_data,keep_data,cash)
@@ -221,10 +240,10 @@ class backtest_base(method.method_base):
         for t in range(self.back_interval[0],self.back_interval[1],-1):
             t1 = time.time()
             self.manage_report(current_time=t)
-            calculate(self)
+            self.exec_lines((line for line in calculate))
             self.manage_data()
             if self.current_zdate>= self.roistart_date:
-                evaluate(self) #計算交叉值與持股比重
+                self.exec_lines((line for line in evaluate))
                 #在當天收盤、資訊充分揭露後才計算持股數量
             self.cal_roi()
             if self.current_zdate>= self.roistart_date:
@@ -233,17 +252,11 @@ class backtest_base(method.method_base):
                 print(pandas.to_datetime(str(self.current_zdate)).strftime('%Y-%m-%d'))
         print('ok')
         self.manage_backtest_outcome()
-        lm = sns.relplot(x="zdate", y="present value",height=5, aspect=3, kind="line", hue='pname',legend="full", data=self.simple_roi_data)
-        lm.fig.suptitle('每日結算投資現值', fontsize=18)
-        if self.applied == True:
-            lm.savefig(self.current_dir+'/backtest_pv_'+str(self.roistart_date)+'.png')
-        lm = sns.relplot(x="zdate", y="return",height=5, aspect=3, kind="line", hue='pname', legend="full", data=self.simple_roi_data)
-        lm.fig.suptitle('每日損益', fontsize=18)
-        if self.applied == True:
-            lm.savefig(self.current_dir+'/backtest_return_'+str(self.roistart_date)+'.png')
+
         t3 = time.time()
         elapsed_time = t3-t0
         print('total cost'+str(elapsed_time))
+
     def overwrite_data(self,input_data=None,exist_data=None):
         if input_data is not None and exist_data is not None:
             mkey = ['zdate','coid']
@@ -309,8 +322,11 @@ class backtest_base(method.method_base):
         return df[['zdate','coid','unit','value','roibnext']]
     def combine_query(self,import_data=None):
         self.all_date_data = self.prc_basedate.copy()
+        
         if import_data is not None:
             self.all_date_data = self.all_date_data.merge(import_data,on=['coid','zdate'],how='left')
+            
+        self.all_date_data = self.all_date_data.rename(columns={"收盤價(元)": "股價", "報酬率-Ln": "報酬率"})
     def do_outputfile(self):
         temp_output_list = self.all_date_data.columns.tolist()
         for code in self.indicator_attr:

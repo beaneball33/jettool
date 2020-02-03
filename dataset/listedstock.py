@@ -52,7 +52,7 @@ class listed_stock(querybase.query_base):
         self.benchmark_roi['sdate'] = self.benchmark_roi['zdate'].astype(str).str[0:7].astype('datetime64')
         self.all_zdate_list = self.benchmark_roi['zdate'].astype(str).unique().astype('datetime64')
         self.back_date_list = self.all_zdate_list.copy()
-    def create_prc_base(self,query_coids=None):
+    def create_prc_base(self,query_coids=None,benchmark=False):
         #用來把代碼轉換成有考慮上市日的coid+zdate集合
         prc_basedate = None
         if query_coids is None:
@@ -70,6 +70,8 @@ class listed_stock(querybase.query_base):
                 prc_basedate = this_prc_basedate
             else:
                 prc_basedate = prc_basedate.append(this_prc_basedate,sort=False)
+        if benchmark is False:
+            prc_basedate = prc_basedate.reindex(columns=['coid','zdate'])
         return prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
     def get_dailydata(self,query_coids=None,base_startdate='2015-12-31',base_date='2019-12-31'):
 

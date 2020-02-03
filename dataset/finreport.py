@@ -145,7 +145,7 @@ class financial_report(querybase.query_base):
                 query_code.remove(codes)
 
         self.query_length = query_length
-        self.datastart_date = self.current_zdate - numpy.timedelta64(self.query_length,'D') 
+
 
         #查詢績效指標報酬率    
         if len(self.input_coids)>0:
