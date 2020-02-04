@@ -5,8 +5,47 @@ import time
 import os
 import tempfile
 import contextlib
+import inspect
 
 class backtest_base(method.method_base):
+    def back_test(self,back_interval=None,import_data=None,keep_data=False,cash=1000000,calculate=None,evaluate=None):
+        print('跨股模型計算與回顧測試')
+        t0 = time.time()
+        self.set_back_test(back_interval,import_data,keep_data,cash)
+        print([self.cash,self.benchmark_cash])
+        print('倒推計算日'+str(self.backstart_date ))
+        print('回測損益起算日'+str(self.roistart_date) )
+        print('back interval:')
+        print(self.back_interval)        
+        print('開始計算指標')
+        calculate = self.create_function_text(calculate)
+        evaluate = self.create_function_text(evaluate)
+        for t in range(self.back_interval[0],self.back_interval[1],-1):
+            t1 = time.time()
+            self.manage_report(current_time=t)
+            self.exec_lines((line for line in calculate))
+            self.manage_data()
+            if self.current_zdate>= self.roistart_date:
+                self.exec_lines((line for line in evaluate))
+                #在當天收盤、資訊充分揭露後才計算持股數量
+            self.cal_roi()
+            if self.current_zdate>= self.roistart_date:
+                print(pandas.to_datetime(str(self.current_zdate)).strftime('%Y-%m-%d')+' 持股現值:'+str(int(self.simple_roi_data.loc[self.simple_roi_data['pname']=='portfolio','present value'].tail(1).values[0])))
+            else:
+                print(pandas.to_datetime(str(self.current_zdate)).strftime('%Y-%m-%d'))
+        print('ok')
+        self.manage_backtest_outcome()
+
+        t3 = time.time()
+        elapsed_time = t3-t0
+        print('total cost'+str(elapsed_time))
+    def create_function_text(self,def_func)
+        if def_func is None:
+            return []
+        else:
+            code_lines = inspect.getsource(calculate).split('\n')
+            code_list = [ code_lines[i].lstrip() for i in range(1,len(code_lines))]
+            return code_list
     def get_back_test_index(self,back_interval):
         start_index = 0
         end_index = -1
@@ -227,35 +266,7 @@ class backtest_base(method.method_base):
         finally:
             with contextlib.suppress(OSError):
                 os.remove(name)
-    def back_test(self,back_interval=None,import_data=None,keep_data=False,cash=1000000,calculate=[],evaluate=[]):
-        print('跨股模型計算與回顧測試')
-        t0 = time.time()
-        self.set_back_test(back_interval,import_data,keep_data,cash)
-        print([self.cash,self.benchmark_cash])
-        print('倒推計算日'+str(self.backstart_date ))
-        print('回測損益起算日'+str(self.roistart_date) )
-        print('back interval:')
-        print(self.back_interval)        
-        print('開始計算指標')
-        for t in range(self.back_interval[0],self.back_interval[1],-1):
-            t1 = time.time()
-            self.manage_report(current_time=t)
-            self.exec_lines((line for line in calculate))
-            self.manage_data()
-            if self.current_zdate>= self.roistart_date:
-                self.exec_lines((line for line in evaluate))
-                #在當天收盤、資訊充分揭露後才計算持股數量
-            self.cal_roi()
-            if self.current_zdate>= self.roistart_date:
-                print(pandas.to_datetime(str(self.current_zdate)).strftime('%Y-%m-%d')+' 持股現值:'+str(int(self.simple_roi_data.loc[self.simple_roi_data['pname']=='portfolio','present value'].tail(1).values[0])))
-            else:
-                print(pandas.to_datetime(str(self.current_zdate)).strftime('%Y-%m-%d'))
-        print('ok')
-        self.manage_backtest_outcome()
 
-        t3 = time.time()
-        elapsed_time = t3-t0
-        print('total cost'+str(elapsed_time))
 
     def overwrite_data(self,input_data=None,exist_data=None):
         if input_data is not None and exist_data is not None:
