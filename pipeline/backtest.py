@@ -35,7 +35,14 @@ class backtest_base(method.method_base):
                 print(pandas.to_datetime(str(self.current_zdate)).strftime('%Y-%m-%d'))
         print('ok')
         self.manage_backtest_outcome()
-
+        lm = sns.relplot(x="zdate", y="present value",height=5, aspect=3, kind="line", hue='pname',legend="full", data=self.simple_roi_data)
+        lm.fig.suptitle('每日結算投資現值', fontsize=18)
+        if self.applied == True:
+            lm.savefig(self.current_dir+'/backtest_pv_'+str(self.roistart_date)+'.png')
+        lm = sns.relplot(x="zdate", y="return",height=5, aspect=3, kind="line", hue='pname', legend="full", data=self.simple_roi_data)
+        lm.fig.suptitle('每日損益', fontsize=18)     
+        if self.applied == True:
+            lm.savefig(self.current_dir+'/backtest_return_'+str(self.roistart_date)+'.png')    
         t3 = time.time()
         elapsed_time = t3-t0
         print('total cost'+str(elapsed_time))

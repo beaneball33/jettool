@@ -23,12 +23,10 @@ class query_base(object):
         job_list = []
 
         if self.dataend_date > dataend_date:
-            print('c1')
             #代表目前資料的迄日早於新的迄日，要補上次迄日到本次迄日間資料
             job_list = job_list +[{'mdate_up':self.dataend_date,'mdate_down':dataend_date}]
 
         if self.datastart_date < datastart_date:
-            print('c2')
             #代表目前資料的起日於新的迄日，要補本次起日到上次起日間資料
             job_list = job_list +[{'mdate_up':datastart_date,'mdate_down':self.datastart_date}]
         return job_list
