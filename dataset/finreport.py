@@ -33,30 +33,32 @@ class financial_report(querybase.query_base):
                     else:
                         print(cname+':not find')
         return ans
-    def get_announce(self,query_coid=None):
+    def get_announce(self,query_coid=None,target_name=''):
         if len(query_coid)>0:
             #嘗試查詢報表封面
-            fin_data = self.tejapi.get('TWN/AIFINQA',
+            table_name = self.market+'/'+target_name
+            fin_data = self.tejapi.get(table_name,
                 coid=query_coid,a0003={'gte':self.datastart_date,'lte':self.current_zdate},
                 opts={"sort":"mdate.desc",'columns':['coid','mdate','a0003']},paginate=True).rename(
                 index=str, columns={"a0003": "zdate"})
         return   fin_data
     def get_report(self,query_code,query_coid=None,rename_cols=True):
         self.acc_code = query_code
-        target_name = [['TWN/AIFINQA','TWN/AIFINQ']]
+        target_name = self.account_table.get(self.market)
         if query_coid is None:
             query_coid = self.input_coids
         all_fin_data = None
         if len(query_coid)>0:
             #嘗試查詢報表封面
-            self.fin_cover = self.get_announce(query_coid)
+            self.fin_cover = self.get_announce(query_coid,target_name['cover'])
             fin_data = self.fin_cover.copy()            
             actual_ciod = fin_data['coid'].unique().tolist()
             if len(fin_data)>0:
                 #如果有查到，代表是這個表
                 #查詢報表
                 query_column = ['coid','mdate'] + query_code
-                fin_report  = self.tejapi.get(target_name[0][1],coid=actual_ciod,
+                table_name = self.market+'/'+target_name['data']
+                fin_report  = self.tejapi.get(table_name,coid=actual_ciod,
                     mdate={'gte':self.datastart_date,'lte':self.current_zdate},
                     opts={"sort":"mdate.desc",'columns':query_column,"pivot":True},paginate=True)
 

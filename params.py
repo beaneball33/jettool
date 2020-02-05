@@ -3,7 +3,7 @@ import numpy
 import os
 import tejapi
 tejapi.ApiConfig.api_key = "your_API_key"
-
+# https://tw-google-styleguide.readthedocs.io/en/latest/google-python-styleguide/python_style_rules.html
 """
 在tejtool中，所有的日期皆必須維持datetime64且最小單位到日，ex:"2019-11-23"的格式
 模組初始化後自動產生預設的日期組
@@ -30,8 +30,12 @@ market = 'TWN'
 roib_name ='報酬率-Ln'
 closed_name ='收盤價(元)'
 
+# 可以查詢的日資料清單
 all_prc_dataset = ['APRCD','AFF_RAW','AMT1','ABSTN1','ASALE']
+# 不同table的zdate名稱對照表
 mdate_name_dict = {"ASALE":"annd_s"}
+
+account_table = {'TWN':{'cover':'AIFINQA','data':'AIFINQ'}}
 data = pandas.DataFrame(columns=['zdate','coid'])
 show_coid = '2330'
 active_view = False

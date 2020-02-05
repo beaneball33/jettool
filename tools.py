@@ -50,7 +50,7 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         left_name = numpy.setdiff1d(column_names, available_fin_name)
         
         #逐一檢查可查詢日資料清單
-        self.get_price_data(prc_name=left_name)
+        self.get_dailydata(prc_name=left_name)
         
         #查詢完畢，更新設定值
         self.set_data_attr()
@@ -73,97 +73,7 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         #取得標準交易日期資料
         self.get_benchmark(base_startdate=self.datastart_date,base_date=self.dataend_date)
 
-    def get_price_data(self,mkts=['TSE','OTC'],prc_name=[]):
-        print('查詢日資料 最大資料日期:'+str(self.dataend_date))
-        #產生標準交易日期資料
-        self.partquery_prc_basedate = self.create_prc_base()
-        self.fullquery_prc_basedate = self.partquery_prc_basedate.reindex(columns=['coid','zdate']).copy()
-        self.append_list = []
-        
 
-        self.part_query_interval = self.get_query_interval()
-        self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
-        
-        for table_name in self.all_prc_dataset:
-            job_list = self.part_query_interval
-            temp_data = None
-            full_query = False
-
-            
-            available_items = self.get_column_name(market=self.market,table_name=table_name)
-            available_cname = available_items.get('columns_cname')
-            available_cname = numpy.intersect1d(prc_name,available_cname).tolist()
-            prc_name = numpy.setdiff1d(prc_name, available_cname).tolist()
-
-            if self.prc_basedate is not None:
-                for col_name in available_cname:
-                    #未在原資料集內的名稱，整個重查
-                    if col_name  not in self.prc_basedate.columns.tolist():
-                        full_query =  True           
-                        job_list = self.full_query_interval
-                        self.append_list = self.append_list + [col_name]
-            else:
-                full_query = True
-            if len(available_cname)>0:
-
-                available_code,available_cname = self.compare_column_name(market=self.market,
-                                                                          table_name=table_name,
-                                                                          query_columns=available_cname)
-                rename_set = { available_code[i]:available_cname[i] 
-                                   for i in range(0,len(available_code))}      
-                                   
-                table_cname = self.get_table_cname(market=self.market,table_name=table_name)
-                print(''.join(table_cname)) 
-                print('重新查詢:'+str(full_query))    
-                for data_interval in job_list:
-                    mdate_up = data_interval['mdate_up']     
-                    mdate_down=data_interval['mdate_down']                    
-
-                    print(data_interval)                    
-                    if full_query is False:
-                        self.append_list = self.append_list + available_cname                    
-                    queried_data = self.query_data_with_date_coid(market=self.market,
-                                                                  table_name=table_name,
-                                                                  query_coid=self.input_coids,
-                                                                  mdate_up=mdate_up,
-                                                                  mdate_down=mdate_down,
-                                                                  query_columns=available_code,
-                                                                  rename_columns=rename_set)
-                    
-                                
-                    if len(queried_data)>0:
-
-                        if temp_data is None:
-                            temp_data = queried_data
-                        else:
-                            temp_data = temp_data.append(queried_data,sort=False)
-
-            #各日期查詢完畢 開始組裝            
-            if temp_data is not None:
-                if full_query is True:
-                    self.fullquery_prc_basedate = self.fullquery_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
-                else:
-                    self.partquery_prc_basedate = self.partquery_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
- 
-        if self.prc_basedate is None:
-            self.prc_basedate = self.fullquery_prc_basedate
-        else:
-            #先進行刪除，再append，再進行merge
-            append_columns = ['zdate','coid'] + self.append_list
-            self.prc_basedate = self.prc_basedate.reindex(columns=append_columns)
-            #要分段append，避免重複
-            for data_interval in self.part_query_interval:
-                temp_data = self.partquery_prc_basedate.loc[(self.partquery_prc_basedate['zdate']<data_interval['mdate_up'])&
-                                            (self.partquery_prc_basedate['zdate']>=data_interval['mdate_down']),
-                                            append_columns]
-                self.prc_basedate = self.prc_basedate.append(temp_data,sort=False)
-            self.prc_basedate = self.prc_basedate.drop_duplicates(subset=['coid','zdate'],keep='last')
-            self.prc_basedate = self.prc_basedate.sort_values(by=['coid','zdate'],
-                                                              ascending=True).reset_index(drop=True)
-
-            self.prc_basedate = self.fullquery_prc_basedate.merge(self.prc_basedate,
-                                                        on=['zdate','coid'],how='left')
-            
     def get_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
         print('查詢財報資料')
         
