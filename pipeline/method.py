@@ -317,7 +317,7 @@ class method_base(object):
         #本方法用來產生投資現值相同的持股方式
         #在持股家數不變下，維持相同持股數，異動之公司，投資現值則與其他各檔平均值相同
         this_coid = self.data.loc[(self.data['購入']==True)&(self.data['coid'].isin(self.listed_coids)),'coid'].values
-        this_closed = self.data.loc[(self.data['購入']==True)&(self.data['coid'].isin(self.listed_coids)),'股價'].values
+        this_closed = self.data.loc[(self.data['購入']==True)&(self.data['coid'].isin(self.listed_coids)),self.closed_name].values
         self.hold_coids = [this_coid.tolist()] + self.hold_coids
         if len(self.hold_coids)>1:
             not_same = False

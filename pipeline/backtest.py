@@ -39,13 +39,13 @@ class backtest_base(method.method_base):
         t3 = time.time()
         elapsed_time = t3-t0
         print('total cost'+str(elapsed_time))
-    def create_function_text(self,def_func)
-        if def_func is None:
-            return []
-        else:
-            code_lines = inspect.getsource(calculate).split('\n')
+    def create_function_text(self,def_func):
+        if inspect.isroutine(def_func) is True:
+            code_lines = inspect.getsource(def_func).split('\n')
             code_list = [ code_lines[i].lstrip() for i in range(1,len(code_lines))]
             return code_list
+        else:
+		            return []
     def get_back_test_index(self,back_interval):
         start_index = 0
         end_index = -1
@@ -196,10 +196,10 @@ class backtest_base(method.method_base):
                         back_index = t
                         break
             if self.by_unit is True:
-                self.data['投資比重'] = self.data['unit']*self.data['股價']/self.cash
+                self.data['投資比重'] = self.data['unit']*self.data[self.closed_name]/self.cash
             else:
-                self.data['unit'] = self.cash*self.data['投資比重']/ self.data['股價']
-            self.data['現值'] = self.data['unit']*self.data['股價']
+                self.data['unit'] = self.cash*self.data['投資比重']/ self.data[self.closed_name]
+            self.data['現值'] = self.data['unit']*self.data[self.closed_name]
             self.data['總現值'] = self.data['現值'].sum()
             self.data['損益'] = 0
             if back_index ==0: #if t ==0:
@@ -210,7 +210,7 @@ class backtest_base(method.method_base):
             else:
                 #最新一期不算損益
                 next_date = self.all_zdate_list[back_index-1] #取出下一個日期，由於當日沒有報酬率，所以沒有
-                next_date_roib = self.prc_basedate.loc[self.prc_basedate['zdate']==next_date,['coid','報酬率']].rename(index=str, columns={'報酬率':'roibNext'})
+                next_date_roib = self.prc_basedate.loc[self.prc_basedate['zdate']==next_date,['coid',self.roib_name]].rename(index=str, columns={self.roib_name:'roibNext'})
                 self.data = self.data.merge(next_date_roib,on=['coid'],how='left').drop_duplicates(subset=['coid']).reset_index(drop=True)
                 this_hold_data = self.data.loc[:,['zdate','coid','unit','現值','roibNext']]
                 self.hold_data = self.hold_data.append(this_hold_data,sort=False)
@@ -225,7 +225,7 @@ class backtest_base(method.method_base):
                     self.data = self.data.merge(self.last_data,on=['coid'],how='left')
                 else:
                     self.data['前期持股']=0
-                self.data['手續費'] = numpy.maximum(0,self.data['unit'] - self.data['前期持股'])*self.data['股價']*self.long_fee+numpy.maximum(0,self.data['前期持股']-self.data['unit'])*self.data['股價']*self.short_fee
+                self.data['手續費'] = numpy.maximum(0,self.data['unit'] - self.data['前期持股'])*self.data[self.closed_name]*self.long_fee+numpy.maximum(0,self.data['前期持股']-self.data['unit'])*self.data[self.closed_name]*self.short_fee
                 self.last_data = self.data.loc[:,['coid','unit']].copy().rename(index=str, columns={'unit':'前期持股'})
                 self.data['損益'] = self.data['現值']*(numpy.exp(self.data['roibNext']/100) - 1 ) - self.data['手續費']
                 self.data['總損益'] = self.data['損益'].sum()
@@ -337,7 +337,7 @@ class backtest_base(method.method_base):
         if import_data is not None:
             self.all_date_data = self.all_date_data.merge(import_data,on=['coid','zdate'],how='left')
             
-        self.all_date_data = self.all_date_data.rename(columns={"收盤價(元)": "股價", "報酬率-Ln": "報酬率"})
+
     def do_outputfile(self):
         temp_output_list = self.all_date_data.columns.tolist()
         for code in self.indicator_attr:

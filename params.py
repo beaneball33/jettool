@@ -18,7 +18,6 @@ current_zdate  = numpy.datetime64('today')
 dataend_date  = numpy.datetime64('today') 
 datastart_date = dataend_date 
 backstart_date = current_zdate - numpy.timedelta64(back_length,'D')
-
 data_attr = {'datastart_date':str(datastart_date),'dataend_date':str(dataend_date)}
 
 coid_length_index = 300
@@ -28,6 +27,8 @@ benchmark_cash = 1000000
 benchmark_id = 'Y9997'
 back_date_list = None
 market = 'TWN'
+roib_name ='報酬率-Ln'
+closed_name ='收盤價(元)'
 
 all_prc_dataset = ['APRCD','AFF_RAW','AMT1','ABSTN1','ASALE']
 mdate_name_dict = {"ASALE":"annd_s"}
