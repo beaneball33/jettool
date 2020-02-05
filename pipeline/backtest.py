@@ -6,6 +6,8 @@ import os
 import tempfile
 import contextlib
 import inspect
+import seaborn as sns; sns.set()
+sns.set_style("whitegrid", {'axes.grid' : False})
 
 class backtest_base(method.method_base):
     def back_test(self,back_interval=None,import_data=None,keep_data=False,cash=1000000,calculate=None,evaluate=None):
