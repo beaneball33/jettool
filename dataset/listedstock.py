@@ -2,6 +2,9 @@ from . import querybase
 import pandas
 # to-do:query basic data mapping dict to change between country
 class listed_stock(querybase.query_base):
+    """
+    此類中暫時存放hardcode寫死的query方法，在修改為對照表查詢之功能後移除改放至querybase
+    """
     def __init__(self):
         self.basic_info = None
         self.prc_basedate = None

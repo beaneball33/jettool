@@ -1,11 +1,5 @@
 ﻿"""
-在最外層的tool中，規範所有讓使用者直接使用的查詢工具
-必須做到以下防呆處理：
-1.不需指定股票代碼，自動根據市場別決定
-2.不需指定財務科目代碼，自動根據中文名稱決定
-3.日資料必須以該市場的大盤指數為準，校正交易日、補零
-  依序使用get_basicdata()、get_benchmark()、create_prc_base()
-  即可產生包含coid、zdate的標準交易日模板prc_basedate，以此為主來合併日資料
+
 """
 from . import params
 from . import dataset
@@ -17,7 +11,16 @@ import numpy
 import inspect
 import json
 import pandas
-class financial_tool(finreport.financial_report,listedstock.listed_stock,backtest.backtest_base):
+class financial_tool(finreport.financial_report,
+                     listedstock.listed_stock,
+                     backtest.backtest_base):
+    """
+    此為最外層的tool，規範所有讓使用者直接使用的查詢工具
+    必須做到以下防呆處理：
+    1.不需指定股票代碼，自動根據市場別決定股票名單
+    2.不需指定財務科目代碼，自動根據中文名稱決定查詢科目名稱
+    3.日資料的交易日會以該市場的大盤指數為準，校正交易日、補零
+    """
     def __init__(self):
         for name in params.__dict__:
             if '__' not in name and not callable(params.__dict__.get(name)):   
@@ -31,9 +34,11 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         else:
             #若使用者代的base_date超過範圍，必須校正
             self.dataend_date = numpy.datetime64(base_date) 
-        this_window_type,self.datastart_date,window_int = self.cal_zdate_by_window(window=window,
-                                                                        base_date=self.dataend_date,
-                                                                        tradeday=False)
+        (this_window_type,
+         self.datastart_date,
+         window_int) = self.cal_zdate_by_window(window=window,
+                                                base_date=self.dataend_date,
+                                                tradeday=False)
         print('資料起始日：'+str(self.datastart_date))
         self.check_initial_data(mkts=mkts)        
         
@@ -55,7 +60,10 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
         #查詢完畢，更新設定值
         self.set_data_attr()
         
-        if self.all_date_data is None and self.prc_basedate is not None and self.findata_all is not None:
+        if (self.all_date_data is None and 
+            self.prc_basedate is not None and 
+            self.findata_all is not None):
+            
             self.set_back_test(back_interval=[1,-1])
             self.manage_report()
         df = self.get_activedate_data(window=window,
@@ -69,9 +77,10 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
             self.inital_report()          
         #取得上市公司清單
         if self.input_coids is None:
-            self.get_basicdata(mkts=mkts,base_startdate=self.datastart_date)           
+            self.get_basicdata(mkts=mkts,base_startdate=self.datastart_date)    
         #取得標準交易日期資料
-        self.get_benchmark(base_startdate=self.datastart_date,base_date=self.dataend_date)
+        self.get_benchmark(base_startdate=self.datastart_date,
+                           base_date=self.dataend_date)
 
 
     def get_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
@@ -94,14 +103,17 @@ class financial_tool(finreport.financial_report,listedstock.listed_stock,backtes
             cname_list = [cname]
         else:
             cname_list = cname
-        cname_outcome = self.get_by_cgrp(active_view=active_view,cgrp=cname_list)
+        cname_outcome = self.get_by_cgrp(active_view=active_view,
+                                         cgrp=cname_list)
         if len(cname_outcome)<1:
             for cname in cname_list:
-                cname_outcome_temp = self.get_by_word(active_view=active_view,keyword=cname)
+                cname_outcome_temp = self.get_by_word(active_view=active_view,
+                                                      keyword=cname)
                 if len(cname_outcome)<1 :
                     cname_outcome = cname_outcome_temp 
                 else:
-                    cname_outcome = numpy.append(cname_outcome,cname_outcome_temp)
+                    cname_outcome = numpy.append(cname_outcome,
+                                                 cname_outcome_temp)
         return cname_outcome
 
     def save_data(self):

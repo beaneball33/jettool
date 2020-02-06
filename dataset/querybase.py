@@ -12,57 +12,103 @@ class query_base(object):
 
     def set_apikey(self,api_key='yourkey'):
         self.tejapi.ApiConfig.api_key = api_key
+        self.info = self.get_info()
+        self.set_tablelist(list(self.info.get('user').get('tables').keys()))
+    def set_tablelist(self,tables):
+
+        for table_name in tables:
+            name_list = table_name.split('/')
+            market = name_list[0]
+            table = name_list[1]
+            if self.api_tables.get(market) is None:
+                self.api_tables[market] = [table]
+            else:
+                self.api_tables[market].append(table)
+        self.set_market(self.market)
+    def set_market(self,market):
+        self.market = market
+        self.all_prc_dataset = self.api_tables.get(self.market)
     def get_info(self):
         info = self.tejapi.ApiConfig.info()
+        print_info = [
+                      '使用者名稱：'+str(info.get('user').get('name'))+'('+str(info.get('user').get('shortName'))+')',
+                      '使用權限日期：'+str(info.get('user').get('subscritionStartDate'))+'/'+str(info.get('user').get('subscritionEndDate')),
+                      '日連線次數狀態：'+str(info.get('todayReqCount'))+'/'+str(info.get('reqDayLimit')),
+                      '日查詢資料量狀態：'+str(info.get('todayRows'))+'/'+str(info.get('rowsDayLimit')),
+                      '月查 詢資料量狀態：'+str(info.get('monthRows'))+'/'+str(info.get('rowsMonthLimit')),
+                      ]
+        
+        print(print_info)
         return info
     def set_data_attr(self):
-        self.data_attr = {'datastart_date':str(self.datastart_date),'dataend_date':str(self.dataend_date)}
+        self.data_attr = {'datastart_date':str(self.datastart_date),
+                          'dataend_date':str(self.dataend_date)}
     def get_query_interval(self):
         dataend_date = numpy.datetime64(self.data_attr.get('dataend_date')) 
-        datastart_date = numpy.datetime64(self.data_attr.get('datastart_date')) 
+        datastart_date = numpy.datetime64(self.data_attr.get('datastart_date'))
         job_list = []
 
         if self.dataend_date > dataend_date:
             #代表目前資料的迄日早於新的迄日，要補上次迄日到本次迄日間資料
-            job_list = job_list +[{'mdate_up':self.dataend_date,'mdate_down':dataend_date}]
+            job_list.append({'mdate_up':self.dataend_date,
+                                   'mdate_down':dataend_date})
 
         if self.datastart_date < datastart_date:
             #代表目前資料的起日於新的迄日，要補本次起日到上次起日間資料
-            job_list = job_list +[{'mdate_up':datastart_date,'mdate_down':self.datastart_date}]
+            job_list.append({'mdate_up':datastart_date,
+                             'mdate_down':self.datastart_date})
         return job_list
+    def get_dataset_name(self,market,table_name):
+        return '{}/{}'.format(market,table_name)
     def query_data_with_date_coid(self,
             market='TWN',table_name='APRCD',query_coid=['2330'],
             mdate_up='2019-12-31',mdate_down='2018-12-31',
             query_columns=['coid','mdate'],rename_columns=None):
             
-        dataset_name = market+'/'+table_name
+        dataset_name = self.get_dataset_name(market,table_name)
         
         self.tempdata = None
         mdate_name = self.mdate_name_dict.get(table_name)
         if mdate_name is None:
             mdate_name='mdate'
         query_columns = list(set(query_columns + ['coid',mdate_name]))
+
+        """
         command_line = "self.tempdata=self.tejapi.get(dataset_name,coid=query_coid,"
         command_line+= mdate_name+"={'gte':mdate_down,'lte':mdate_up},"
         command_line+= "opts={'sort':'"+mdate_name+".desc','columns':query_columns}, paginate=True)"
         command_line+= ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"
+        """
+        command_line = ["self.tempdata=self.tejapi.get('",
+                        dataset_name+"',coid=query_coid,",
+                        mdate_name+"={'gte':mdate_down,'lte':mdate_up},",
+                        "opts={'sort':'"+mdate_name+".desc',",
+                        "'columns':query_columns}, paginate=True)",
+                        ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"]
+        command_line_str = ''.join(command_line)
+        
         context = {"self":self, "__name__": "__main__",
-                   "dataset_name":dataset_name,"query_coid":query_coid,
+                   "query_coid":query_coid,
                    "mdate_down":mdate_down,"mdate_up":mdate_up,
                    "query_columns":query_columns}
-        exec(command_line, context)
+        exec(command_line_str, context)
 
         #data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
         self.tempdata['zdate'] = self.tempdata['zdate'].astype(str).astype('datetime64')
         if rename_columns is not None:
-            print(rename_columns)
+
             self.tempdata = self.tempdata.rename(index=str, columns=rename_columns)
 
         return self.tempdata
     def get_table_cname(self,market='TWN',table_name='APRCD',language='cname'):
-        dataset_name = market+'/'+table_name
+        dataset_name = self.get_dataset_name(market,table_name)
+        
         if self.table_info.get(dataset_name) is None:
-            table_info = self.tejapi.table_info(dataset_name)
+            try:
+                table_info = self.tejapi.table_info(dataset_name)
+            except (RuntimeError, TypeError, NameError):
+                # 代表不是有資料而是對照表，略過
+                return None
             table_info['columns_cname'] = [ 
                 cols['cname'] for cols in table_info['columns'].values()]
             table_info['columns_name'] = [
@@ -71,8 +117,8 @@ class query_base(object):
         return self.table_info[dataset_name]['name']
 
     def compare_column_name(self,market,table_name,query_columns,kind='cname'):
-        table_cname = self.get_table_cname(market=market,table_name=table_name)
-        dataset_name = market+'/'+table_name
+        dataset_name = self.get_dataset_name(market,table_name)
+
         all_columns = self.table_info[dataset_name]['columns']
         ans_code = []
         ans_name = []
@@ -90,15 +136,17 @@ class query_base(object):
             print(left_name)
         return ans_code,ans_name
     def get_column_name(self,market='TWN',table_name='APRCD',language='cname'):
-        dataset_name = market+'/'+table_name
+        dataset_name = self.get_dataset_name(market,table_name)
+        
         table_cname = self.get_table_cname(market=market,table_name=table_name)
         table_info = self.table_info.get(dataset_name)
+
         return {'columns_cname':table_info['columns_cname'],
                 'columns_name':table_info['columns_name']}
     def set_listed_coid(self,df):
         listed_coids = self.basic_info.loc[
-                                       self.basic_info['list_day1']<=self.current_zdate,'coid'
-                                       ].values.tolist()
+                                       self.basic_info['list_day1']<=self.current_zdate,
+                                       'coid'].values.tolist()
         self.current_coids = df.loc[(df['zdate']==self.current_zdate),['zdate','coid']]
         self.listed_coids = df.loc[
             (df['zdate']==self.current_zdate)&(df['coid'].isin(listed_coids)),'coid'
@@ -213,6 +261,9 @@ class query_base(object):
         self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
         for table_name in self.all_prc_dataset:
+            table_cname = self.get_table_cname(market=self.market,table_name=table_name)       
+            if table_cname is None:
+                continue
             job_list = self.part_query_interval
             temp_data = None
             full_query = False
@@ -233,21 +284,20 @@ class query_base(object):
             else:
                 full_query = True
             if len(available_cname)>0:
-
+                #在此table尋找可用的欄位
                 available_code,available_cname = self.compare_column_name(market=self.market,
                                                                           table_name=table_name,
                                                                           query_columns=available_cname)
+
                 rename_set = { available_code[i]:available_cname[i] 
                                    for i in range(0,len(available_code))}      
                                    
-                table_cname = self.get_table_cname(market=self.market,table_name=table_name)
-                print(''.join(table_cname)) 
-                print('重新查詢:'+str(full_query))    
+                print(table_cname+' 重新查詢:'+str(full_query))    
                 for data_interval in job_list:
                     mdate_up = data_interval['mdate_up']     
                     mdate_down=data_interval['mdate_down']                    
 
-                    print(data_interval)                    
+                    
                     if full_query is False:
                         self.append_list = self.append_list + available_cname                    
                     queried_data = self.query_data_with_date_coid(market=self.market,
