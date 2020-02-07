@@ -2,6 +2,9 @@ from . import querybase
 import pandas
 import numpy
 class financial_report(querybase.query_base):
+    """
+    本方法用來管理財報資料專屬查詢工具
+    """
     def __init__(self):
         self.accountData = None
         self.activeAccountData  = None	

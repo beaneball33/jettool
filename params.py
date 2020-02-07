@@ -38,7 +38,7 @@ api_tables = {}
 # 可以查詢的日資料清單
 all_prc_dataset = ['APRCD','AFF_RAW','AMT1','ABSTN1','ASALE']
 # 不同table的zdate名稱對照表
-mdate_name_dict = {"ASALE":"annd_s"}
+mdate_name_dict = {'ASALE':{'mdate':'annd_s','frequency':'M'},'ABSTN1':{'mdate':'mdate','frequency':'D'}}
 
 account_table = {'TWN':{'cover':'AIFINQA','data':'AIFINQ'}}
 data = pandas.DataFrame(columns=['zdate','coid'])

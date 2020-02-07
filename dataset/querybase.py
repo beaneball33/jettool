@@ -1,34 +1,22 @@
-﻿import tejapi
+﻿from . import dbapi
+import tejapi
 import pandas
 import numpy
 
 tejapi.ApiConfig.api_key = "your_API_key"
 
-
-
-class query_base(object):
+class query_base(dbapi.db_attr):
     def __init__(self):
         self.tejapi = tejapi
-
+        self.tablelist = tablelist
     def set_apikey(self,api_key='yourkey'):
+        # 使用者設定api key之後的各種工作
         self.tejapi.ApiConfig.api_key = api_key
         self.info = self.get_info()
         self.set_tablelist(list(self.info.get('user').get('tables').keys()))
-    def set_tablelist(self,tables):
-
-        for table_name in tables:
-            name_list = table_name.split('/')
-            market = name_list[0]
-            table = name_list[1]
-            if self.api_tables.get(market) is None:
-                self.api_tables[market] = [table]
-            else:
-                self.api_tables[market].append(table)
-        self.set_market(self.market)
-    def set_market(self,market):
-        self.market = market
-        self.all_prc_dataset = self.api_tables.get(self.market)
+        
     def get_info(self):
+        #取得使用者api key資訊
         info = self.tejapi.ApiConfig.info()
         print_info = [
                       '使用者名稱：'+str(info.get('user').get('name'))+'('+str(info.get('user').get('shortName'))+')',
@@ -39,11 +27,18 @@ class query_base(object):
                       ]
         
         print(print_info)
-        return info
+        return info        
+        
+    def set_market(self,market):
+        #設定使用者要查詢的市場
+        self.market = market
+
     def set_data_attr(self):
+        # 設定查詢工具對於資料的各種參數設定，用來製造暫存檔用
         self.data_attr = {'datastart_date':str(self.datastart_date),
                           'dataend_date':str(self.dataend_date)}
     def get_query_interval(self):
+        # 用來產生不重複查詢區間
         dataend_date = numpy.datetime64(self.data_attr.get('dataend_date')) 
         datastart_date = numpy.datetime64(self.data_attr.get('datastart_date'))
         job_list = []
@@ -59,18 +54,19 @@ class query_base(object):
                              'mdate_down':self.datastart_date})
         return job_list
     def get_dataset_name(self,market,table_name):
+        # 產生資料表全名
         return '{}/{}'.format(market,table_name)
+        
     def query_data_with_date_coid(self,
             market='TWN',table_name='APRCD',query_coid=['2330'],
-            mdate_up='2019-12-31',mdate_down='2018-12-31',
+            mdate_up='2019-12-31',mdate_down='2018-12-31',mdate_name='mdate',
             query_columns=['coid','mdate'],rename_columns=None):
-            
+        # 根據給定資料表名稱與條件，動態產生查詢式
+        
         dataset_name = self.get_dataset_name(market,table_name)
         
         self.tempdata = None
-        mdate_name = self.mdate_name_dict.get(table_name)
-        if mdate_name is None:
-            mdate_name='mdate'
+        
         query_columns = list(set(query_columns + ['coid',mdate_name]))
 
         """
@@ -101,6 +97,7 @@ class query_base(object):
 
         return self.tempdata
     def get_table_cname(self,market='TWN',table_name='APRCD',language='cname'):
+        # 取得table名稱並同時透過api查詢該table的資訊
         dataset_name = self.get_dataset_name(market,table_name)
         
         if self.table_info.get(dataset_name) is None:
@@ -117,8 +114,9 @@ class query_base(object):
         return self.table_info[dataset_name]['name']
 
     def compare_column_name(self,market,table_name,query_columns,kind='cname'):
+        # 比較指定表單中是否存在某個欄位名稱
+    
         dataset_name = self.get_dataset_name(market,table_name)
-
         all_columns = self.table_info[dataset_name]['columns']
         ans_code = []
         ans_name = []
@@ -136,6 +134,7 @@ class query_base(object):
             print(left_name)
         return ans_code,ans_name
     def get_column_name(self,market='TWN',table_name='APRCD',language='cname'):
+        # 取得欄位的中文名稱，以便用來把欄位實體名稱改為中文
         dataset_name = self.get_dataset_name(market,table_name)
         
         table_cname = self.get_table_cname(market=market,table_name=table_name)
@@ -144,6 +143,8 @@ class query_base(object):
         return {'columns_cname':table_info['columns_cname'],
                 'columns_name':table_info['columns_name']}
     def set_listed_coid(self,df):
+        # 透過basic_info中的上市股票名單取得coid
+        
         listed_coids = self.basic_info.loc[
                                        self.basic_info['list_day1']<=self.current_zdate,
                                        'coid'].values.tolist()
@@ -152,6 +153,8 @@ class query_base(object):
             (df['zdate']==self.current_zdate)&(df['coid'].isin(listed_coids)),'coid'
             ].values.tolist()    
     def cal_zdate_by_window(self,window,base_date,peer_future=False,tradeday=True):
+        # 計算指定移動窗口以前的zdate
+    
         if 'q' not in window:
             if 'd'  in window:
                 this_window_type = 'D'
@@ -173,7 +176,8 @@ class query_base(object):
             window,column_names,peer_future=False,
             base_date=None,base_mdate=None
             ,clue_length=None,keep='first'):
-            
+        # 根據window取得某些欄位資料
+        
         current_data = None
         column_names = ['zdate','mdate','coid']+column_names
         df = self.all_date_data
@@ -250,6 +254,8 @@ class query_base(object):
                                                                 [numpy.inf, -numpy.inf], numpy.nan)
         return current_data ,this_window_type, window
     def get_dailydata(self,mkts=['TSE','OTC'],prc_name=[]):
+        # 標準化日資料(有zdate，不需轉置)的查詢工具)，給定欄位名稱就可以查詢
+    
         print('查詢日資料 最大資料日期:'+str(self.dataend_date))
         #產生標準交易日期資料
         self.partquery_prc_basedate = self.create_prc_base()
@@ -264,6 +270,9 @@ class query_base(object):
             table_cname = self.get_table_cname(market=self.market,table_name=table_name)       
             if table_cname is None:
                 continue
+            mdate_name = 'mdate' 
+            if self.mdate_name_dict.get(table_name) is not None:
+                mdate_name = self.mdate_name_dict.get(table_name).get('mdate')
             job_list = self.part_query_interval
             temp_data = None
             full_query = False
@@ -305,6 +314,7 @@ class query_base(object):
                                                                   query_coid=self.input_coids,
                                                                   mdate_up=mdate_up,
                                                                   mdate_down=mdate_down,
+                                                                  mdate_name=mdate_name,
                                                                   query_columns=available_code,
                                                                   rename_columns=rename_set)
                     
@@ -343,7 +353,8 @@ class query_base(object):
                                                         on=['zdate','coid'],how='left')
 
     def create_prc_base(self,query_coids=None,benchmark=False):
-        #用來把代碼轉換成有考慮上市日的coid+zdate集合
+        # 透過績效指標的交易日用來產生有考慮上市日的coid+zdate集合，藉此校正資料
+        
         prc_basedate = None
         if query_coids is None:
             query_coids = self.input_coids
