@@ -24,6 +24,13 @@ class financial_tool(finreport.financial_report,
             if '__' not in name and not callable(params.__dict__.get(name)):   
                 self.__dict__[name] = params.__dict__.get(name)
         #self.load_data()
+    def search_cname(self,cname='報酬率'):
+        match_dict = { search['tableId']:search for search in self.tejapi.search_table(cname)}
+        for search in match_dict:
+            match_columns = match_dict.get(search).get('columns')
+            for column in match_columns:
+                if cname in column.get('cname'):
+                    print()
     def get_data(self,window,column_names,base_date=None,mkts=['TSE','OTC']):
          
         #自動化處理觀測日期base_date=current_zdate
