@@ -36,9 +36,14 @@ closed_name ='收盤價(元)'
 # 可以查詢的資料表國別分類清單
 api_tables = {}
 # 可以查詢的日資料清單
-all_prc_dataset = ['APRCD','AFF_RAW','AMT1','ABSTN1','ASALE']
+#all_prc_dataset = ['APRCD','AFF_RAW','AMT1','ABSTN1','ASALE']
+all_prc_dataset = []
+all_prc_dataset_freq = ['D','W','S','M','Y']
 # 不同table的zdate名稱對照表
 mdate_name_dict = {'ASALE':{'mdate':'annd_s','frequency':'M'},'ABSTN1':{'mdate':'mdate','frequency':'D'}}
+category_list = {}
+market_list = {}
+table_list = {}
 
 account_table = {'TWN':{'cover':'AIFINQA','data':'AIFINQ'}}
 data = pandas.DataFrame(columns=['zdate','coid'])

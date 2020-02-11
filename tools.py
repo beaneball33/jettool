@@ -1,5 +1,9 @@
 ﻿"""
+TODO LIST:
 
+1.get_basicdata需要改為抽象化查詢，改成到各個屬性table找裡面有標記"基本資料"的，但其實目前只有一個TWN的表
+
+2.get_benchmark需要改為抽象化查詢，改成到各個table找描述裡面有標記'內含績效指標&績效指標代碼'
 """
 from . import params
 from . import dataset
@@ -25,14 +29,17 @@ class financial_tool(finreport.financial_report,
                 self.__dict__[name] = params.__dict__.get(name)
         #self.load_data()
     def search_cname(self,cname='報酬率'):
+        match_list = []
         match_dict = { search['tableId']:search for search in self.tejapi.search_table(cname)}
         for search in match_dict:
             match_columns = match_dict.get(search).get('columns')
             for column in match_columns:
                 if cname in column.get('cname'):
-                    print()
+                    match_list.append(column.get('cname'))
+        return match_list
+        
     def get_data(self,window,column_names,base_date=None,mkts=['TSE','OTC']):
-         
+        
         #自動化處理觀測日期base_date=current_zdate
         if base_date is None:
             base_date = self.dataend_date
@@ -60,6 +67,7 @@ class financial_tool(finreport.financial_report,
         left_name = numpy.setdiff1d(column_names, available_fin_name)
         
         #逐一檢查可查詢日資料清單
+        
         self.get_dailydata(prc_name=left_name)
         
         #查詢完畢，更新設定值
@@ -72,9 +80,10 @@ class financial_tool(finreport.financial_report,
             self.set_back_test(back_interval=[1,-1])
             self.manage_report()
         df = self.get_activedate_data(window=window,
-            column_names=column_names,
+                                      column_names=column_names,
             base_date=base_date)[0]
         return df
+        
     def check_initial_data(self,mkts=['TSE','OTC']):
         #用來初始化查詢用的基本資料
         #取得會計科目表
@@ -89,10 +98,13 @@ class financial_tool(finreport.financial_report,
 
 
     def get_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
+        # 可以抽象化查詢財報資料，自動整何公告日與財報季別
+        
         print('查詢財報資料')
         
         self.check_initial_data()
-            
+        if len(acc_name) ==0:
+            acc_name.append('常續性稅後淨利')
         query_code = self.get_acc_code(acc_name=acc_name,
                                        active_view=active_view)
         
@@ -102,6 +114,8 @@ class financial_tool(finreport.financial_report,
         
         print('最大財報資料日期:'+str(self.current_mdate))
     def get_account_name(self,cname,active_view=False):
+        #自動整合查詢財報科目，可以查名稱，若沒有則查分類
+    
         if self.accountData is None:
             self.inital_report()    
         if type(cname).__name__ == 'str':
@@ -122,7 +136,8 @@ class financial_tool(finreport.financial_report,
         return cname_outcome
         
     def get_basicdata(self,mkts=['TSE'],base_startdate='2015-12-31'):
-        # define query column
+        # 基本屬性資料，需要改為抽像化查詢
+        
         query_column = [
             'coid','mkt','elist_day1','list_day2','list_day1',
             'tejind2_c','tejind3_c','tejind4_c','tejind5_c']
@@ -157,12 +172,24 @@ class financial_tool(finreport.financial_report,
             self.input_coids = self.listdata.loc[self.listdata['coid'].isin(self.input_coids),'coid'].values.tolist()
 			
 
-    def get_benchmark(self,base_startdate='2015-12-31',base_date='2019-12-31'):
+    def get_benchmark(self,benchmark_id=None,base_startdate='2015-12-31',base_date='2019-12-31'):
+        # 績效指標的函式 需要改為抽象化查詢
+        
+        if benchmark_id is None:
+            benchmark_id=self.benchmark_id
+        
         rename_column = {'mdate':'zdate','close_d':'績效指標指數','roib':'績效指標報酬率'}
-        self.benchmark_roi = self.tejapi.get('TWN/APRCD',coid=self.benchmark_id,
+        
+        if len(self.category_list)==0:
+            self.get_category()
+        prc_table_list = self.category_list[4]
+        # 從分類表中查詢可用的資料表
+        
+        self.benchmark_roi = self.tejapi.get('TWN/AAPRCDA',coid=benchmark_id,
             mdate={'gte':base_startdate,'lte':base_date},
-            opts={"sort":"mdate.desc",'columns':['mdate','close_d','roib']},
+            opts={"sort":"mdate.desc",'columns':['mdate','close_d']},
             paginate=True).rename(index=str, columns=rename_column)
+            
         self.benchmark_roi['zdate'] = self.benchmark_roi['zdate'].astype(str).astype('datetime64')
         self.benchmark_roi['sdate'] = self.benchmark_roi['zdate'].astype(str).str[0:7].astype('datetime64')
         self.all_zdate_list = self.benchmark_roi['zdate'].astype(str).unique().astype('datetime64')
@@ -170,6 +197,7 @@ class financial_tool(finreport.financial_report,
 
 
     def save_data(self):
+        # 此函式用來把目前query結果儲存在module路徑
         dir_name = os.path.dirname(inspect.getfile(dataset))
         
         if self.prc_basedate is not None:
@@ -185,6 +213,7 @@ class financial_tool(finreport.financial_report,
             json.dump(self.data_attr, f)   
             
     def load_data(self,file_path=None):
+        # 此函式用來把module路徑的暫存檔取出
         if file_path is None:
             dir_name = os.path.dirname(inspect.getfile(dataset))
         else:

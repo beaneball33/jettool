@@ -254,8 +254,9 @@ class query_base(dbapi.db_attr):
                                                                 [numpy.inf, -numpy.inf], numpy.nan)
         return current_data ,this_window_type, window
     def get_dailydata(self,mkts=['TSE','OTC'],prc_name=[]):
-        # 標準化日資料(有zdate，不需轉置)的查詢工具)，給定欄位名稱就可以查詢
     
+        # 標準化日資料(有zdate，不需轉置)的查詢工具)，給定欄位名稱就可以查詢
+        self.set_query_ordinal()
         print('查詢日資料 最大資料日期:'+str(self.dataend_date))
         #產生標準交易日期資料
         self.partquery_prc_basedate = self.create_prc_base()

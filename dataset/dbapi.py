@@ -97,8 +97,10 @@ class db_attr(object):
     def set_query_ordinal(self):
         #按照category_list中的順序，將可查詢的表拼湊
         tempordinal = []
-        all_prc_dataset_freq = ['D','W','S','M','Y']
+        
         # 加入交易屬性類，以頻率決定
+        if len(self.category_list)==0:
+            self.get_category()
         for subcategory in self.category_list.get(4).get('subs'):
             if len(subcategory.get('tableMap'))>0:
                 for table_attr in subcategory.get('tableMap'):
@@ -107,7 +109,7 @@ class db_attr(object):
                         if table_id in self.api_tables.get(self.market):
                             table_data = self.table_list.get(self.market)
                             data_freq = table_data.get(table_id).get('frequency')
-                            if data_freq  in all_prc_dataset_freq:
+                            if data_freq  in self.all_prc_dataset_freq:
                                 tempordinal.append(table_id)
         # 加入基本屬性類，需要正面表類
         for subcategory in self.category_list.get(3).get('subs'):
@@ -119,7 +121,7 @@ class db_attr(object):
                             if table_id in self.mdate_name_dict.keys():
                                 mdate_dict = self.mdate_name_dict.get(table_id)
                                 frequency = mdate_dict.get('frequency')
-                                if frequency  in all_prc_dataset_freq:
+                                if frequency  in self.all_prc_dataset_freq:
                                     tempordinal.append(table_id)
         self.all_prc_dataset = tempordinal
         
