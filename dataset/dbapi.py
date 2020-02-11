@@ -99,8 +99,8 @@ class db_attr(object):
         tempordinal = []
         
         # 加入交易屬性類，以頻率決定
-        if len(self.category_list)==0:
-            self.get_category()
+
+
         for subcategory in self.category_list.get(4).get('subs'):
             if len(subcategory.get('tableMap'))>0:
                 for table_attr in subcategory.get('tableMap'):
@@ -125,6 +125,14 @@ class db_attr(object):
                                     tempordinal.append(table_id)
         self.all_prc_dataset = tempordinal
         
+    def get_table_mapping(self,market='TWN',id='AIND'):
+        #根據已知的table名稱，查詢mapping
+        for catefory_index in self.category_list:
+            for tableMap in self.category_list[catefory_index]['subs']:
+                for table in tableMap.get('tableMap'):
+                    if market in table.get('dbCode') and market+'/'+id in table.get('tableId'):
+                        return tableMap
+                    
     def search_column(self,keyword='報酬率',condition='and',current_market=True):
 
         k_name_list = keyword.split(' ')

@@ -1,9 +1,9 @@
 ﻿"""
 TODO LIST:
 
-1.get_basicdata需要改為抽象化查詢，改成到各個屬性table找裡面有標記"基本資料"的，但其實目前只有一個TWN的表
+1.query_basicdata需要改為抽象化查詢，改成到各個屬性table找裡面有標記"基本資料"的，但其實目前只有一個TWN的表
 
-2.get_benchmark需要改為抽象化查詢，改成到各個table找描述裡面有標記'內含績效指標&績效指標代碼'
+2.query_benchmark需要改為抽象化查詢，改成到各個table找描述裡面有標記'內含績效指標&績效指標代碼'
 """
 from . import params
 from . import dataset
@@ -22,23 +22,17 @@ class financial_tool(finreport.financial_report,
     1.不需指定股票代碼，自動根據市場別決定股票名單
     2.不需指定財務科目代碼，自動根據中文名稱決定查詢科目名稱
     3.日資料的交易日會以該市場的大盤指數為準，校正交易日、補零
+    4.find開頭代表查找某種東西，query開頭代表須要進行api取資料，get代表不進行query在已經取好的資料集中進行資料整合取得
     """
-    def __init__(self):
+    def __init__(self,api_key=None):
         for name in params.__dict__:
             if '__' not in name and not callable(params.__dict__.get(name)):   
                 self.__dict__[name] = params.__dict__.get(name)
+        if api_key is not None:
+            self.set_apikey(api_key)
         #self.load_data()
-    def search_cname(self,cname='報酬率'):
-        match_list = []
-        match_dict = { search['tableId']:search for search in self.tejapi.search_table(cname)}
-        for search in match_dict:
-            match_columns = match_dict.get(search).get('columns')
-            for column in match_columns:
-                if cname in column.get('cname'):
-                    match_list.append(column.get('cname'))
-        return match_list
         
-    def get_data(self,window,column_names,base_date=None,mkts=['TSE','OTC']):
+    def query_data(self,window,column_names,base_date=None,mkts=['TSE','OTC']):
         
         #自動化處理觀測日期base_date=current_zdate
         if base_date is None:
@@ -61,14 +55,14 @@ class financial_tool(finreport.financial_report,
         #取出確實存在於會計科目的名稱
         available_fin_name = self.get_available_name(column_names)
         if len(available_fin_name)>0:
-            self.get_report_data(mkts=mkts,acc_name=available_fin_name)
+            self.query_report_data(mkts=mkts,acc_name=available_fin_name)
         #取出差異名稱
 
         left_name = numpy.setdiff1d(column_names, available_fin_name)
         
         #逐一檢查可查詢日資料清單
         
-        self.get_dailydata(prc_name=left_name)
+        self.query_dailydata(prc_name=left_name)
         
         #查詢完畢，更新設定值
         self.set_data_attr()
@@ -91,13 +85,13 @@ class financial_tool(finreport.financial_report,
             self.inital_report()          
         #取得上市公司清單
         if self.input_coids is None:
-            self.get_basicdata(mkts=mkts,base_startdate=self.datastart_date)    
+            self.query_basicdata(mkts=mkts,base_startdate=self.datastart_date)    
         #取得標準交易日期資料
-        self.get_benchmark(base_startdate=self.datastart_date,
+        self.query_benchmark(base_startdate=self.datastart_date,
                            base_date=self.dataend_date)
 
 
-    def get_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
+    def query_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
         # 可以抽象化查詢財報資料，自動整何公告日與財報季別
         
         print('查詢財報資料')
@@ -113,7 +107,7 @@ class financial_tool(finreport.financial_report,
                       active_view=active_view)
         
         print('最大財報資料日期:'+str(self.current_mdate))
-    def get_account_name(self,cname,active_view=False):
+    def find_account_name(self,cname,active_view=False):
         #自動整合查詢財報科目，可以查名稱，若沒有則查分類
     
         if self.accountData is None:
@@ -134,28 +128,43 @@ class financial_tool(finreport.financial_report,
                     cname_outcome = numpy.append(cname_outcome,
                                                  cname_outcome_temp)
         return cname_outcome
+    def query_dailydata(self,mkts=['TSE','OTC'],prc_name=[]):
+    
+        if len(prc_name)>0:
+            self.query_tradedata(prc_name=prc_name)
         
-    def get_basicdata(self,mkts=['TSE'],base_startdate='2015-12-31'):
+    def query_basicdata(self,mkts=['TSE'],base_startdate='2015-12-31'):
         # 基本屬性資料，需要改為抽像化查詢
         
-        query_column = [
+
+        
+        table_maping = self.get_table_mapping(market='TWN',id='AIND').get('tableMap')
+        base_table = None
+        for table in table_maping:
+            if self.market == table.get('dbCode'):
+                base_table = table.get('tableId')
+
+        query_columns = [
             'coid','mkt','elist_day1','list_day2','list_day1',
             'tejind2_c','tejind3_c','tejind4_c','tejind5_c']
             
         # define rename column, must remove after bugfixed
-        rename_column = {'tejind2_c': 'TEJ產業名','tejind3_c': 'TEJ子產業名',
+        rename_columns = {'tejind2_c': 'TEJ產業名','tejind3_c': 'TEJ子產業名',
             'tejind4_c':'TSE新產業名','tejind5_c':'主計處產業名'}
             
         # query all up-to-date listed stock 
-        self.basic_info = self.tejapi.get('TWN/AIND',mkt=mkts,
-            opts={'columns':query_column},
-            paginate=True).rename(index=str, columns=rename_column)
-            
+        command_line = ["self.basic_info=self.tejapi.get('"+base_table+"',",
+                        "opts={'columns':query_columns}, ",
+                        "paginate=True)",
+                        ".rename(index=str, columns=rename_columns)"]
+        context = {"query_columns":query_columns,"rename_columns":rename_columns}
+        
+        self.exec_tool(context,command_line)
         # query all up-to-date delisted stock 
         self.basic_info_delist = self.tejapi.get('TWN/AIND',mkt='',
             list_day2={'gte':base_startdate},
-            opts={'columns':query_column},
-            paginate=True).rename(index=str, columns=rename_column)
+            opts={'columns':query_columns},
+            paginate=True).rename(index=str, columns=rename_columns)
         # always makesure date format is datetime64 without [ns]
         self.basic_info = self.basic_info.append(self.basic_info_delist,sort=False)
         self.basic_info['list_day2'] = pandas.to_datetime(self.basic_info['list_day2'].values,utc=True)
@@ -172,7 +181,7 @@ class financial_tool(finreport.financial_report,
             self.input_coids = self.listdata.loc[self.listdata['coid'].isin(self.input_coids),'coid'].values.tolist()
 			
 
-    def get_benchmark(self,benchmark_id=None,base_startdate='2015-12-31',base_date='2019-12-31'):
+    def query_benchmark(self,benchmark_id=None,base_startdate='2015-12-31',base_date='2019-12-31'):
         # 績效指標的函式 需要改為抽象化查詢
         
         if benchmark_id is None:
@@ -180,8 +189,8 @@ class financial_tool(finreport.financial_report,
         
         rename_column = {'mdate':'zdate','close_d':'績效指標指數','roib':'績效指標報酬率'}
         
-        if len(self.category_list)==0:
-            self.get_category()
+
+
         prc_table_list = self.category_list[4]
         # 從分類表中查詢可用的資料表
         

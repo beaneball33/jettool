@@ -14,6 +14,9 @@ class query_base(dbapi.db_attr):
         self.tejapi.ApiConfig.api_key = api_key
         self.info = self.get_info()
         self.set_tablelist(list(self.info.get('user').get('tables').keys()))
+        self.get_market()
+        self.get_category()
+        self.get_tables()
         
     def get_info(self):
         #取得使用者api key資訊
@@ -81,13 +84,14 @@ class query_base(dbapi.db_attr):
                         "opts={'sort':'"+mdate_name+".desc',",
                         "'columns':query_columns}, paginate=True)",
                         ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"]
-        command_line_str = ''.join(command_line)
         
-        context = {"self":self, "__name__": "__main__",
-                   "query_coid":query_coid,
+        
+        context = {"query_coid":query_coid,
                    "mdate_down":mdate_down,"mdate_up":mdate_up,
                    "query_columns":query_columns}
-        exec(command_line_str, context)
+                   
+        
+        self.exec_tool(context,command_line)
 
         #data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
         self.tempdata['zdate'] = self.tempdata['zdate'].astype(str).astype('datetime64')
@@ -96,6 +100,11 @@ class query_base(dbapi.db_attr):
             self.tempdata = self.tempdata.rename(index=str, columns=rename_columns)
 
         return self.tempdata
+    def exec_tool(self,context,command_line):
+        context['self'] = self
+        context['__name__'] = '__main__'
+        command_line_str = ''.join(command_line)
+        exec(command_line_str, context)
     def get_table_cname(self,market='TWN',table_name='APRCD',language='cname'):
         # 取得table名稱並同時透過api查詢該table的資訊
         dataset_name = self.get_dataset_name(market,table_name)
@@ -253,7 +262,7 @@ class query_base(dbapi.db_attr):
         current_data[column_names] = current_data[column_names].replace(
                                                                 [numpy.inf, -numpy.inf], numpy.nan)
         return current_data ,this_window_type, window
-    def get_dailydata(self,mkts=['TSE','OTC'],prc_name=[]):
+    def query_tradedata(self,mkts=['TSE','OTC'],prc_name=[]):
     
         # 標準化日資料(有zdate，不需轉置)的查詢工具)，給定欄位名稱就可以查詢
         self.set_query_ordinal()
