@@ -46,6 +46,10 @@ market_list = {}
 table_list = {}
 
 account_table = {'TWN':{'cover':'AIFINQA','data':'AIFINQ'}}
+
+# kind=1代表有對照表，kind=2代表沒有
+macro_table = {'ANMAR':{'dbCode':'GLOBAL','cover':'ABMAR','kind':1},'GCURR':{'dbCode':'GLOBAL','kind':2},'ARATE':{'dbCode':'TWN','kind':2}}
+
 data = pandas.DataFrame(columns=['zdate','coid'])
 show_coid = '2330'
 active_view = False

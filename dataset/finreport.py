@@ -176,6 +176,7 @@ class financial_report(querybase.query_base):
             ans = self.activeAccountData.loc[self.activeAccountData['cdesc'].str.contains(keyword),'cdesc'].reset_index(drop=True)
         return ans
     def get_by_cgrp(self,cgrp=['損益表'],active_view=False):
+
         if active_view is False:
             ans = self.accountData.loc[self.accountData['cgrp'].isin(cgrp),'cname'].reset_index(drop=True)
         else:
@@ -183,11 +184,3 @@ class financial_report(querybase.query_base):
             cgrp_code = [cgrp_list.get(cgrp[k]) for k in range(0,len(cgrp))]
             ans = self.activeAccountData.loc[self.activeAccountData['acct_type'].isin(cgrp_code),'cdesc'].reset_index(drop=True)
         return ans
-    def get_available_name(self,column_names):
-        # 用來查出可以用的財務科目
-    
-        available_fin_name = self.accountData.loc[
-            self.accountData['cname'].isin(column_names),['code','ename','cname']
-            ].drop_duplicates(subset=['code'],keep='last')
-        available_fin_name = available_fin_name['cname'].values
-        return available_fin_name

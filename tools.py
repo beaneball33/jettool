@@ -49,32 +49,32 @@ class financial_tool(finreport.financial_report,
         self.check_initial_data(mkts=mkts)        
         
         #處理查詢欄位名稱
-        column_names = list(set(column_names)) 
+        column_names_list = list(set(column_names)) 
         #開始檢查各個查詢名稱所屬的資料表
 
         #取出確實存在於會計科目的名稱
-        available_fin_name = self.get_available_name(column_names)
+        available_fin_name,column_names = self.get_available_name(column_names_list,category=5)
         if len(available_fin_name)>0:
-            self.query_report_data(mkts=mkts,acc_name=available_fin_name)
+            self.query_report_data(mkts=mkts,available_cname=available_fin_name)
         #取出差異名稱
 
-        left_name = numpy.setdiff1d(column_names, available_fin_name)
+
         
         #逐一檢查可查詢日資料清單
-        
-        self.query_dailydata(prc_name=left_name)
+        available_prc_name,column_names = self.get_available_name(column_names,category=4)
+        self.available_prc_name = available_prc_name
+        self.query_dailydata(prc_name=available_prc_name)
         
         #查詢完畢，更新設定值
         self.set_data_attr()
         
-        if (self.all_date_data is None and 
-            self.prc_basedate is not None and 
+        if (self.prc_basedate is not None and 
             self.findata_all is not None):
             
             self.set_back_test(back_interval=[1,-1])
             self.manage_report()
         df = self.get_activedate_data(window=window,
-                                      column_names=column_names,
+                                      column_names=column_names_list,
             base_date=base_date)[0]
         return df
         
@@ -91,11 +91,12 @@ class financial_tool(finreport.financial_report,
                            base_date=self.dataend_date)
 
 
-    def query_report_data(self,mkts=['TSE','OTC'],acc_name=[],active_view=False):
+    def query_report_data(self,available_cname,mkts=['TSE','OTC'],active_view=False):
         # 可以抽象化查詢財報資料，自動整何公告日與財報季別
         
         print('查詢財報資料')
         
+        acc_name = available_cname.get('fin')
         self.check_initial_data()
         if len(acc_name) ==0:
             acc_name.append('常續性稅後淨利')
@@ -128,10 +129,11 @@ class financial_tool(finreport.financial_report,
                     cname_outcome = numpy.append(cname_outcome,
                                                  cname_outcome_temp)
         return cname_outcome
-    def query_dailydata(self,mkts=['TSE','OTC'],prc_name=[]):
+    def query_dailydata(self,mkts=['TSE','OTC'],prc_name={}):
     
         if len(prc_name)>0:
             self.query_tradedata(prc_name=prc_name)
+        
         
     def query_basicdata(self,mkts=['TSE'],base_startdate='2015-12-31'):
         # 基本屬性資料，需要改為抽像化查詢

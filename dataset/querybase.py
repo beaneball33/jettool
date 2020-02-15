@@ -17,6 +17,8 @@ class query_base(dbapi.db_attr):
         self.get_market()
         self.get_category()
         self.get_tables()
+        # 標準化日資料(有zdate，不需轉置)的查詢工具)，給定欄位名稱就可以查詢
+        self.set_query_ordinal()        
         
     def get_info(self):
         #取得使用者api key資訊
@@ -264,8 +266,7 @@ class query_base(dbapi.db_attr):
         return current_data ,this_window_type, window
     def query_tradedata(self,mkts=['TSE','OTC'],prc_name=[]):
     
-        # 標準化日資料(有zdate，不需轉置)的查詢工具)，給定欄位名稱就可以查詢
-        self.set_query_ordinal()
+
         print('查詢日資料 最大資料日期:'+str(self.dataend_date))
         #產生標準交易日期資料
         self.partquery_prc_basedate = self.create_prc_base()
@@ -276,10 +277,12 @@ class query_base(dbapi.db_attr):
         self.part_query_interval = self.get_query_interval()
         self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
-        for table_name in self.all_prc_dataset:
-            table_cname = self.get_table_cname(market=self.market,table_name=table_name)       
-            if table_cname is None:
+        #for table_name in self.all_prc_dataset:
+        for table_name in prc_name:
+            if table_name in self.all_prc_dataset is None:
+                print("沒有存取權限："+table_name)
                 continue
+
             mdate_name = 'mdate' 
             if self.mdate_name_dict.get(table_name) is not None:
                 mdate_name = self.mdate_name_dict.get(table_name).get('mdate')
@@ -288,10 +291,8 @@ class query_base(dbapi.db_attr):
             full_query = False
 
             
-            available_items = self.get_column_name(market=self.market,table_name=table_name)
-            available_cname = available_items.get('columns_cname')
-            available_cname = numpy.intersect1d(prc_name,available_cname).tolist()
-            prc_name = numpy.setdiff1d(prc_name, available_cname).tolist()
+
+            available_cname = prc_name.get(table_name)
 
             if self.prc_basedate is not None:
                 for col_name in available_cname:
@@ -302,7 +303,7 @@ class query_base(dbapi.db_attr):
                         self.append_list = self.append_list + [col_name]
             else:
                 full_query = True
-            if len(available_cname)>0:
+            if available_cname is not None:
                 #在此table尋找可用的欄位
                 available_code,available_cname = self.compare_column_name(market=self.market,
                                                                           table_name=table_name,
@@ -310,7 +311,7 @@ class query_base(dbapi.db_attr):
 
                 rename_set = { available_code[i]:available_cname[i] 
                                    for i in range(0,len(available_code))}      
-                                   
+                table_cname = self.get_table_cname(market=self.market,table_name=table_name)       
                 print(table_cname+' 重新查詢:'+str(full_query))    
                 for data_interval in job_list:
                     mdate_up = data_interval['mdate_up']     
@@ -384,3 +385,45 @@ class query_base(dbapi.db_attr):
         if benchmark is False:
             prc_basedate = prc_basedate.reindex(columns=['coid','zdate'])
         return prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
+        
+    def get_available_name(self,column_names,category=5):
+        available_cname = {}
+        # 用來查出可以用的欄位
+        #1總經
+        
+        #2信用風險分析
+        
+        #3公司營運面資料
+        
+        #4公司交易面資料
+        if category == 4 :
+            for table_name in self.all_prc_dataset:
+                table_cname = self.get_table_cname(market=self.market,table_name=table_name)       
+                if table_cname is None:
+                    continue
+                
+                available_items = self.get_column_name(market=self.market,table_name=table_name)
+                
+                columns_cname = available_items.get('columns_cname')
+                columns_cname = numpy.intersect1d(column_names,columns_cname).tolist()
+                if len(columns_cname)>0:  
+                    column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
+                    available_cname[table_name] = columns_cname
+        #5公司財務面資料
+        elif category == 5 :
+            columns_cname = self.accountData.loc[
+                self.accountData['cname'].isin(column_names),['code','ename','cname']
+                ].drop_duplicates(subset=['code'],keep='last')
+            columns_cname = columns_cname['cname'].values        
+            column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
+            available_cname['fin'] = columns_cname
+        #6基金資料庫
+        
+        #7衍生性金融商品資料庫
+        
+        #8債券資料庫
+        
+        #9試用
+    
+
+        return available_cname,column_names
