@@ -123,3 +123,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+dataset/prc_basedate.pkl
+dataset/findata_all.pkl
+dataset/data_attr.json

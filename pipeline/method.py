@@ -1,5 +1,6 @@
 import pandas
 import numpy
+import scipy
 from datetime import datetime, date, timedelta
 import time 
 import traceback

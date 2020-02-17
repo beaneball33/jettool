@@ -214,7 +214,7 @@ class query_base(dbapi.db_attr):
             else:
                 current_data = df.loc[(df['zdate']>base_date)&(df['zdate']<=next_base_date),column_names]
             current_data['temp_d'] = (base_date - current_data['zdate']) / numpy.timedelta64(1, 'D')
-            current_data = current_data.sort_values(by=['coid','temp_d']).drop(columns=['temp_d'])
+            current_data = current_data.sort_values(by=['coid','temp_d'],ascending=False).drop(columns=['temp_d'])
 
         else:
             if clue_length is None:
@@ -250,7 +250,7 @@ class query_base(dbapi.db_attr):
             current_data['temp_d'] = (base_mdate - current_data['mdate']) / numpy.timedelta64(1, 'D')
             if peer_future is False:
                 current_data = current_data[(current_data['mdate']<=base_mdate)]
-                current_data = current_data.sort_values(by=['coid','mdate'],ascending=True                                            
+                current_data = current_data.sort_values(by=['coid','mdate'],ascending=False                                            
                                             ).drop_duplicates(subset=['coid','mdate'],keep='first'
                                             ).reset_index(drop=True
                                             ).drop(columns=['temp_d'])
