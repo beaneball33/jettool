@@ -162,3 +162,13 @@ class db_attr(object):
         match_df = match_df.dropna().reset_index(drop=True)
         current_market
         return match_df
+    def get_table_columns(self,table_name='TWN/AAPRCDA'):
+        columns_name = []
+        table_info = self.tejapi.table_info(table_name)
+        pk = table_info.get('primaryKey')
+
+        columns = table_info.get('columns')
+        for col in columns:
+            if columns.get(col).get('name') not in pk:
+                columns_name.append(columns.get(col).get('cname'))
+        return columns_name
