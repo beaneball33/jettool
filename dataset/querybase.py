@@ -250,8 +250,9 @@ class query_base(dbapi.db_attr):
             current_data['temp_d'] = (base_mdate - current_data['mdate']) / numpy.timedelta64(1, 'D')
             if peer_future is False:
                 current_data = current_data[(current_data['mdate']<=base_mdate)]
-                current_data = current_data.sort_values(by=['coid','mdate']
+                current_data = current_data.sort_values(by=['coid','mdate'],ascending=True                                            
                                             ).drop_duplicates(subset=['coid','mdate'],keep='first'
+                                            ).reset_index(drop=True
                                             ).drop(columns=['temp_d'])
             else:
                 current_data = current_data.sort_values(by=['coid','temp_d']
@@ -362,7 +363,7 @@ class query_base(dbapi.db_attr):
 
             self.prc_basedate = self.fullquery_prc_basedate.merge(self.prc_basedate,
                                                         on=['zdate','coid'],how='left')
-
+            self.prc_basedate = self.prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
     def create_prc_base(self,query_coids=None,benchmark=False):
         # 透過績效指標的交易日用來產生有考慮上市日的coid+zdate集合，藉此校正資料
         

@@ -10,8 +10,13 @@ import seaborn as sns; sns.set()
 sns.set_style("whitegrid", {'axes.grid' : False})
 
 class backtest_base(method.method_base):
-    def back_test(self,back_interval=None,import_data=None,keep_data=False,cash=1000000,calculate=None,evaluate=None):
+    def back_test(self,back_interval=None,cash=1000000,
+                       import_data=None,keep_data=False,
+                       calculate=None,evaluate=None,
+                       roib_name='報酬率-Ln',closed_name ='收盤價(元)'):
         print('跨股模型計算與回顧測試')
+        self.roib_name = roib_name
+        self.closed_name = closed_name
         t0 = time.time()
         self.set_back_test(back_interval,import_data,keep_data,cash)
         print([self.cash,self.benchmark_cash])
