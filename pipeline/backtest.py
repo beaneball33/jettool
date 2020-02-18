@@ -216,6 +216,7 @@ class backtest_base(method.method_base):
             self.data['現值'] = self.data['unit']*self.data[self.closed_name]
             self.data['總現值'] = self.data['現值'].sum()
             self.data['損益'] = 0
+            self.data['unit'] = self.data['unit'].fillna(0)
             if back_index ==0: #if t ==0:
                 #當遞迴日期就是回測最晚一天(basedate)時，報酬率無法計算，填入0
                 this_hold_data = self.data.loc[:,['zdate','coid','unit','現值']]
@@ -231,7 +232,7 @@ class backtest_base(method.method_base):
                 try:
                     benchmark_roi_rate = self.benchmark_roi.loc[self.benchmark_roi['zdate']==next_date,'績效指標報酬率'].values[0]
                 except:
-                    print(str(next_date)+' no benchmark roi')
+                    #print(str(next_date)+' no benchmark roi')
                     benchmark_roi_rate = 0
                 self.benchmark_return = self.benchmark_cash*(numpy.exp(benchmark_roi_rate/100) -1)
                 self.benchmark_cash = self.benchmark_cash + self.benchmark_return
@@ -239,6 +240,7 @@ class backtest_base(method.method_base):
                     self.data = self.data.merge(self.last_data,on=['coid'],how='left')
                 else:
                     self.data['前期持股']=0
+                self.data['前期持股'] = self.data['前期持股'].replace([numpy.inf, -numpy.inf], numpy.nan)
                 self.data['手續費'] = numpy.maximum(0,self.data['unit'] - self.data['前期持股'])*self.data[self.closed_name]*self.long_fee+numpy.maximum(0,self.data['前期持股']-self.data['unit'])*self.data[self.closed_name]*self.short_fee
                 self.last_data = self.data.loc[:,['coid','unit']].copy().rename(index=str, columns={'unit':'前期持股'})
                 self.data['損益'] = self.data['現值']*(numpy.exp(self.data['roibNext']/100) - 1 ) - self.data['手續費']
