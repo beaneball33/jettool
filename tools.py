@@ -75,9 +75,24 @@ class financial_tool(finreport.financial_report,
             self.manage_report()
         df = self.get_activedate_data(window=window,
                                       column_names=column_names_list,
-            base_date=base_date)[0]
+                                      base_date=base_date)[0]
         return df
-        
+    def get_data(self,window,column_names,base_date=None):
+        #處理查詢欄位名稱
+        column_names_list = list(set(column_names))     
+        if base_date is None:
+            base_date = self.dataend_date        
+        zdate_interval = self.get_zdate(base_date)
+        print(zdate_interval)
+        if (self.prc_basedate is not None and 
+            self.findata_all is not None):
+            
+            self.set_back_test(back_interval=zdate_interval)
+            self.manage_report()
+        df = self.get_activedate_data(window=window,
+                                      column_names=column_names_list,
+                                      base_date=base_date)[0]
+        return df
     def check_initial_data(self,mkts=['TSE','OTC']):
         #用來初始化查詢用的基本資料
         #取得會計科目表

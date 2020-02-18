@@ -183,6 +183,17 @@ class query_base(dbapi.db_attr):
         next_base_date = numpy.array([next_base_date]).astype('datetime64')[0]
 
         return this_window_type,next_base_date,window
+    def get_zdate(self,base_date):
+
+        base_date = numpy.datetime64(base_date) 
+        last_zdate = numpy.datetime64(base_date) 
+        for zdate in self.all_zdate_list:
+            if zdate < base_date:
+                print(zdate)
+                break
+            last_zdate = zdate
+            
+        return [zdate,last_zdate]
     def get_activedate_data(self,
             window,column_names,peer_future=False,
             base_date=None,base_mdate=None

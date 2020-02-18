@@ -2,6 +2,7 @@ import pandas
 import numpy
 import scipy
 from datetime import datetime, date, timedelta
+import statsmodels.api as sm
 import time 
 import traceback
 class method_base(object):
@@ -87,16 +88,17 @@ class method_base(object):
             result=filter.sum(axis=1).sort_values().rank(method='max')[:int(len(filter)*rank_above*0.01)+1]
             result_df = pandas.DataFrame(result).rename(columns={0: 'temp'})
         return result_df
-    def make_famamacbethmodel(self,col_name='報酬率',check_index=['市值','現金股利率'],window='12m',alpha_rate=5,reset_list='01',keep=None,target_name=None,peer_future=False):
+    def make_famamacbethmodel(self,col_name='報酬率',check_index=['市值','現金股利率'],window='12m',alpha_rate=5,reset_list=None,keep=None,target_name=None,peer_future=False):
         t1 = time.time()
         ans_val = numpy.nan
         target_name = self.check_function_input(target_name)
         if self.check_data_available(target_name):
             ans = self.data[target_name].values
             return ans
+            
         actual_reset_list = self.manage_resetlist(reset_list)
-        self.retrain_model[target_name] = self.check_resetdate(actual_reset_list)
-        if self.retrain_model.get(target_name) is True:
+        trained_model = None
+        if self.check_resetdate(actual_reset_list) is True:
             #若famamacbeth_outcome沒有順利產生或不存在
             print('重新進行fama macbeth估計')
             input_col_name = [col_name]+check_index
@@ -113,7 +115,10 @@ class method_base(object):
                 if t_test_result is None:
                     print('fama_macbeth_test無有效因子')
                 else:
-                    self.trained_model[target_name] = t_test_result
+                    if target_name is not None:
+                        self.trained_model[target_name] = t_test_result
+                    else:
+                        trained_model = t_test_result
                     print(t_test_result)
                     print('樣本數'+str(len(this_date_data))+'/'+str(len(self.input_coids)*window)+' 完成估計 因子數:'+str(len(t_test_result.columns)))
                     fama_factors_coef = str(t_test_result.loc['coef',:].values[0])
@@ -124,10 +129,13 @@ class method_base(object):
                     ans_val = fama_factors_name+'#'+fama_factors_coef
             else:
                 print('樣本數'+str(len(this_date_data))+'/'+str(len(self.input_coids)*window)+' fama_macbeth_test樣本數不足')
-        all_coid_data = self.current_coids.copy()
-        all_coid_data['zdate'] = self.current_zdate
-        all_coid_data['temp'] = ans_val
-        ans = self.unify_data(all_coid_data,target_name,check_index='temp')
+        if target_name is not None:
+            all_coid_data = self.current_coids.copy()
+            all_coid_data['zdate'] = self.current_zdate
+            all_coid_data['temp'] = ans_val
+            ans = self.unify_data(all_coid_data,target_name,check_index='temp')
+        else:
+            ans = trained_model
         return ans
     def run_famascore(self,col_name=None,rank_above=100,class_count=1,target_name=None):
         t1 = time.time()
@@ -179,6 +187,8 @@ class method_base(object):
         return result_df.loc[:,[check_index,'temp']]
     def check_resetdate(self,actual_reset_list):
         #檢查，若重置日期符合實際交易日，且需與該交易日相同
+        if actual_reset_list is None:
+            return True
         ans = False
         for d_i in range(0,len(actual_reset_list)):
             #print([pandas.to_datetime(self.current_zdate).strftime('%Y-%m-%d'),actual_reset_list[d_i],reset_list_y[d_i]])
@@ -190,6 +200,8 @@ class method_base(object):
                 ans = False
         return ans
     def manage_resetlist(self,reset_list):
+        if reset_list is None:
+            return None
         reset_list_y = []
         if type(reset_list).__name__ == 'str':   
             reset_list = [reset_list]
@@ -654,14 +666,16 @@ class method_base(object):
         elapsed_time = t2-t1
         return ans
     def unify_data(self,input_data,target_name,check_index='temp'):
+    
+        #首先將計算完成的資料跟當天的股票代碼表合併
         all_coid_data = self.current_coids.merge(input_data,on=['coid'],how='left')
+        #進行補值跟異常值處理
         all_coid_data[check_index] = all_coid_data[check_index].fillna(0)
         all_coid_data[check_index] = all_coid_data[check_index].replace([numpy.inf, -numpy.inf], numpy.nan)
+        
+        #沒有target name，則回傳陣列
         if target_name is None:
-            self.all_date_data[check_index] = numpy.nan
-            self.all_date_data.loc[self.all_date_data['zdate']==self.current_zdate,check_index] = all_coid_data[check_index].values
-            ans = self.all_date_data[check_index].values
-            self.all_date_data = self.all_date_data.drop(columns=[check_index])
+            ans = all_coid_data.rename(columns={check_index: 'value'})
         else:
             self.all_date_data.loc[self.all_date_data['zdate']==self.current_zdate,target_name] = all_coid_data[check_index].values
             ans = self.all_date_data[target_name].values
@@ -710,14 +724,18 @@ class method_base(object):
             current_commands= traceback.format_stack()
             current_trace = current_commands[len(current_commands)-(1+trace_layer)].split('\n')
             current_line = current_trace[len(current_trace)-2]
-            if '=' in current_line:
+            if '=' in current_line and 'tejtool.data[' in current_line:
                 first_phraes = current_line.split('=')[0]
-                right_name = first_phraes.split("tejtool.data['")[1]
-                target_name = right_name.split("']")[0]
+                if 'tejtool.data' in first_phraes:
+                    right_name = first_phraes.split("tejtool.data['")[1]
+                    target_name = right_name.split("']")[0]
+                    
         return target_name
     #給計算公式用，按照給訂window取出資料以便做計算
     def check_data_available(self,target_name):
         ans = False
+        if target_name is None:
+            return ans
         if target_name in self.all_date_data.columns:
             m = self.all_date_data.loc[self.all_date_data['zdate']==self.current_zdate,target_name].copy().dropna()
             if len(m)>0:
