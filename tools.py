@@ -114,7 +114,7 @@ class financial_tool(finreport.financial_report,
         acc_name = available_cname.get('fin')
         self.check_initial_data()
         if len(acc_name) ==0:
-            acc_name.append('常續性稅後淨利')
+            acc_name = ['常續性稅後淨利']
         query_code = self.get_acc_code(acc_name=acc_name,
                                        active_view=active_view)
         

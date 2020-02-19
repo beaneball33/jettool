@@ -808,23 +808,10 @@ class method_base(object):
                 last_date = numpy.array([str(pandas.to_datetime(base_date).year - jump_length)+'-'+fix_date]).astype('datetime64')[0]
             elif len(fix_date.split('-'))==1:
                 jump_kind = 'M'
-                jump_year = 0
-                jump_month = jump_length
-                if pandas.to_datetime(base_date).month<=jump_length or pandas.to_datetime(base_date).month-jump_length>12:
-                    if (jump_month)%12!=0:
-                        if jump_month>0:
-                            jump_year = int(numpy.floor((jump_length - pandas.to_datetime(base_date).month)/12)) +1
-                            jump_month = (jump_month)%12 -12
-                        else:
-                            jump_year = int(numpy.floor((jump_length - pandas.to_datetime(base_date).month)/12)) +1
-                            jump_month = (12+(jump_month)%12)%12
-                    else:
-                        jump_year = int(jump_length/12)
-                        jump_month = 0
-                adj_m = str(pandas.to_datetime(base_date).month - jump_month)
-                if len(adj_m)<2:
-                    adj_m = '0'+adj_m
-                adj_date = str(pandas.to_datetime(base_date).year - jump_year)+'-'+adj_m+'-'+fix_date
+                adj_yyyymm = (numpy.datetime64(pandas.to_datetime(base_date).strftime('%Y-%m'))  
+                            - numpy.timedelta64(jump_length,jump_kind))
+
+                adj_date = str(adj_yyyymm)+'-'+fix_date
                 adj_date = self.check_available_date(adj_date)
                 last_date = numpy.array([adj_date]).astype('datetime64')[0]
         else:

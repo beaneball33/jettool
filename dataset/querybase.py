@@ -106,6 +106,7 @@ class query_base(dbapi.db_attr):
         context['self'] = self
         context['__name__'] = '__main__'
         command_line_str = ''.join(command_line)
+
         exec(command_line_str, context)
     def get_table_cname(self,market='TWN',table_name='APRCD',language='cname'):
         # 取得table名稱並同時透過api查詢該table的資訊
