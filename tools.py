@@ -111,7 +111,7 @@ class financial_tool(finreport.financial_report,
         
         print('查詢財報資料')
         
-        acc_name = available_cname.get('fin')
+        acc_name = available_cname[0].get('columns_cname')
         self.check_initial_data()
         if len(acc_name) ==0:
             acc_name = ['常續性稅後淨利']
@@ -145,8 +145,9 @@ class financial_tool(finreport.financial_report,
                                                  cname_outcome_temp)
         return cname_outcome
     def query_dailydata(self,mkts=['TSE','OTC'],prc_name={}):
-    
+        
         if len(prc_name)>0:
+
             self.query_tradedata(prc_name=prc_name)
         
         

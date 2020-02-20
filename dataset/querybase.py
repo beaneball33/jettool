@@ -285,13 +285,16 @@ class query_base(dbapi.db_attr):
         self.partquery_prc_basedate = self.create_prc_base()
         self.fullquery_prc_basedate = self.partquery_prc_basedate.reindex(columns=['coid','zdate']).copy()
         self.append_list = []
+
         
 
         self.part_query_interval = self.get_query_interval()
         self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
         #for table_name in self.all_prc_dataset:
-        for table_name in prc_name:
+        for table_attr in prc_name:
+            table_name = table_attr.get('id')
+            available_cname = table_attr.get('columns_cname')
             if table_name in self.all_prc_dataset is None:
                 print("沒有存取權限："+table_name)
                 continue
@@ -304,15 +307,17 @@ class query_base(dbapi.db_attr):
             full_query = False
 
             
-
-            available_cname = prc_name.get(table_name)
+            
+            
 
             if self.prc_basedate is not None:
+                
                 for col_name in available_cname:
                     #未在原資料集內的名稱，整個重查
                     if col_name  not in self.prc_basedate.columns.tolist():
-                        full_query =  True           
+                        full_query =  True     
                         job_list = self.full_query_interval
+                    else:
                         self.append_list = self.append_list + [col_name]
             else:
                 full_query = True
@@ -356,13 +361,14 @@ class query_base(dbapi.db_attr):
                     self.fullquery_prc_basedate = self.fullquery_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
                 else:
                     self.partquery_prc_basedate = self.partquery_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
- 
+        
         if self.prc_basedate is None:
             self.prc_basedate = self.fullquery_prc_basedate
         else:
             #先進行刪除，再append，再進行merge
             append_columns = ['zdate','coid'] + self.append_list
             self.prc_basedate = self.prc_basedate.reindex(columns=append_columns)
+
             #要分段append，避免重複
             for data_interval in self.part_query_interval:
                 temp_data = self.partquery_prc_basedate.loc[(self.partquery_prc_basedate['zdate']<data_interval['mdate_up'])&
@@ -400,7 +406,7 @@ class query_base(dbapi.db_attr):
         return prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
         
     def get_available_name(self,column_names,category=5):
-        available_cname = {}
+        available_cname = []
         # 用來查出可以用的欄位
         #1總經
         
@@ -421,7 +427,8 @@ class query_base(dbapi.db_attr):
                 columns_cname = numpy.intersect1d(column_names,columns_cname).tolist()
                 if len(columns_cname)>0:  
                     column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
-                    available_cname[table_name] = columns_cname
+                    available_cname.append({'id':table_name,'columns_cname':columns_cname})
+                    print(table_name+' '+table_cname)
         #5公司財務面資料
         elif category == 5 :
             columns_cname = self.accountData.loc[
@@ -429,7 +436,7 @@ class query_base(dbapi.db_attr):
                 ].drop_duplicates(subset=['code'],keep='last')
             columns_cname = columns_cname['cname'].values        
             column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
-            available_cname['fin'] = columns_cname
+            available_cname = [{'id':'fin','columns_cname':columns_cname}]
         #6基金資料庫
         
         #7衍生性金融商品資料庫
