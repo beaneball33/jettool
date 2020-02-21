@@ -126,7 +126,7 @@ class query_base(dbapi.db_attr):
         return self.table_info[dataset_name]['name']
 
     def compare_column_name(self,market,table_name,query_columns,kind='cname'):
-        # 比較指定表單中是否存在某個欄位名稱
+        # 比較指定資料表單中是否存在某個欄位名稱
     
         dataset_name = self.get_dataset_name(market,table_name)
         all_columns = self.table_info[dataset_name]['columns']
@@ -145,6 +145,26 @@ class query_base(dbapi.db_attr):
             print('lack columns:')
             print(left_name)
         return ans_code,ans_name
+    def compare_code_name(self,table_name,query_columns):
+        # 比較指定代碼表單中是否存在某個代碼名稱
+    
+        coid_list = None
+        for dataset in self.macro_mapping_coids:
+            if table_name == dataset.get('id'):
+                coid_list = dataset.get('coid_list')
+                break
+
+        ans_code = []
+        ans_name = []
+        for cname in query_columns:
+            if coid_list.get(cname) is not None:
+                ans_code += [coid_list.get(cname)]
+                ans_name += [cname]
+        left_name = numpy.setdiff1d(query_columns, ans_name).tolist()
+        if len(left_name)>0:
+            print('lack columns:')
+            print(left_name)
+        return ans_code,ans_name        
     def get_column_name(self,market='TWN',table_name='APRCD',language='cname'):
         # 取得欄位的中文名稱，以便用來把欄位實體名稱改為中文
         dataset_name = self.get_dataset_name(market,table_name)
@@ -409,26 +429,36 @@ class query_base(dbapi.db_attr):
         available_cname = []
         # 用來查出可以用的欄位
         #1總經
-        
+        # 總經要控制coid名稱+資料表來當欄位名稱 
+        if category == 1 :
+            for coid_map_table in self.macro_mapping_coids:
+                #從代碼對照表中逐一檢查欄位
+                table_id = coid_map_table.get('id')
+                coid_names = list(coid_map_table.get('coid_list').values())
+                #查詢欄位與名稱的交集
+                columns_cname = numpy.intersect1d(column_names,columns_cname).tolist()
+                if len(columns_cname)>0:  
+                    column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
+                    available_cname.append({'id':table_id,'columns_cname':columns_cname})
         #2信用風險分析
         
         #3公司營運面資料
         
         #4公司交易面資料
-        if category == 4 :
-            for table_name in self.all_prc_dataset:
-                table_cname = self.get_table_cname(market=self.market,table_name=table_name)       
+        elif category == 4 :
+            for table_id in self.all_prc_dataset:
+                table_cname = self.get_table_cname(market=self.market,table_name=table_id)       
                 if table_cname is None:
                     continue
                 
-                available_items = self.get_column_name(market=self.market,table_name=table_name)
+                available_items = self.get_column_name(market=self.market,table_name=table_id)
                 
                 columns_cname = available_items.get('columns_cname')
                 columns_cname = numpy.intersect1d(column_names,columns_cname).tolist()
                 if len(columns_cname)>0:  
                     column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
-                    available_cname.append({'id':table_name,'columns_cname':columns_cname})
-                    print(table_name+' '+table_cname)
+                    available_cname.append({'id':table_id,'columns_cname':columns_cname})
+                    print(table_id+' '+table_cname)
         #5公司財務面資料
         elif category == 5 :
             columns_cname = self.accountData.loc[
@@ -445,5 +475,4 @@ class query_base(dbapi.db_attr):
         
         #9試用
     
-
         return available_cname,column_names

@@ -77,7 +77,7 @@ class financial_tool(finreport.financial_report,
                                       column_names=column_names_list,
                                       base_date=base_date)[0]
         return df
-    def get_data(self,window,column_names,base_date=None):
+    def get_data(self,column_names,window='1d',base_date=None):
         #處理查詢欄位名稱
         column_names_list = list(set(column_names))     
         if base_date is None:
@@ -150,7 +150,8 @@ class financial_tool(finreport.financial_report,
 
             self.query_tradedata(prc_name=prc_name)
         
-        
+    def query_macrodata(self,prc_name={}):
+        print('macro')
     def query_basicdata(self,mkts=['TSE'],base_startdate='2015-12-31'):
         # 基本屬性資料，需要改為抽像化查詢
         

@@ -97,9 +97,8 @@ class db_attr(object):
     def set_query_ordinal(self):
         #按照category_list中的順序，將可查詢的表拼湊
         tempordinal = []
-        
-        # 加入交易屬性類，以頻率決定
 
+        # 加入交易屬性類，以頻率決定
 
         for subcategory in self.category_list.get(4).get('subs'):
             if len(subcategory.get('tableMap'))>0:
@@ -111,6 +110,7 @@ class db_attr(object):
                             data_freq = table_data.get(table_id).get('frequency')
                             if data_freq  in self.all_prc_dataset_freq:
                                 tempordinal.append(table_id)
+
         # 加入基本屬性類，需要正面表類
         for subcategory in self.category_list.get(3).get('subs'):
             if len(subcategory.get('tableMap'))>0:
@@ -124,13 +124,26 @@ class db_attr(object):
                                 if frequency  in self.all_prc_dataset_freq:
                                     tempordinal.append(table_id)
         self.all_prc_dataset = tempordinal
+
+        #管理總經類
+        for coid_map_table in self.macro_mapping_coids:
+            # 逐一檢視設定表內各個TABLE
+            if coid_map_table.get('coid_list') is None:
+                coid_table = coid_map_table.get('coid_table')
+                coid_cname_column = coid_map_table.get('cname')
+                code_data = tejapi.get(coid_table,
+                                      opts={'columns':['coid',coid_cname_column]},
+                                      paginate=True).values.tolist()
+                coid_list = {rows[1]:rows[0] for rows in code_data}
+                coid_map_table['coid_list'] = coid_list
         
     def get_table_mapping(self,market='TWN',id='AIND'):
         #根據已知的table名稱，查詢mapping
         for catefory_index in self.category_list:
             for tableMap in self.category_list[catefory_index]['subs']:
                 for table in tableMap.get('tableMap'):
-                    if market in table.get('dbCode') and market+'/'+id in table.get('tableId'):
+                    if (market in table.get('dbCode') and
+                        market+'/'+id in table.get('tableId')):
                         return tableMap
                     
     def search_column(self,keyword='報酬率',condition='and',current_market=True):
@@ -152,7 +165,8 @@ class db_attr(object):
                                                   match_table])
             if condition =='and':
                 break
-        match_df = pandas.DataFrame(match_outcome,columns=['cname','tableName','tableCode'])
+        match_df = pandas.DataFrame(match_outcome,
+                                    columns=['cname','tableName','tableCode'])
         if condition =='and':
             for i in range(1,len(k_name_list)):
                 if len(match_df)>0:
