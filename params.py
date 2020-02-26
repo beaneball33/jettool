@@ -40,7 +40,7 @@ api_tables = {}
 all_prc_dataset = []
 all_prc_dataset_freq = ['D','W','S','M','Y']
 # 不同table的zdate名稱對照表
-mdate_name_dict = {'ASALE':{'mdate':'annd_s','frequency':'M'},'ABSTN1':{'mdate':'mdate','frequency':'D'}}
+mdate_name_dict = {'ASALE':{'mdate':'annd_s','frequency':'M'},'ABSTN1':{'mdate':'mdate','frequency':'D'},'ACRQMTAB':{'mdate':'rmk_d','frequency':'S'}}
 category_list = {}
 market_list = {}
 table_list = {}

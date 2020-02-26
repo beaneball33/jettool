@@ -124,6 +124,18 @@ class db_attr(object):
                                 if frequency  in self.all_prc_dataset_freq:
                                     tempordinal.append(table_id)
         self.all_prc_dataset = tempordinal
+        # 加入信用風險分析
+
+        for subcategory in self.category_list.get(2).get('subs'):
+            if len(subcategory.get('tableMap'))>0:
+                for table_attr in subcategory.get('tableMap'):
+                    if table_attr.get('dbCode') == self.market:
+                        table_id = table_attr.get('tableId').split('/')[1]
+                        if table_id in self.api_tables.get(self.market):
+                            table_data = self.table_list.get(self.market)
+                            data_freq = table_data.get(table_id).get('frequency')
+                            if data_freq  in self.all_prc_dataset_freq:
+                                tempordinal.append(table_id)
 
         #管理總經類
         for coid_map_table in self.macro_mapping_coids:

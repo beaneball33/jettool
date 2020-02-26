@@ -445,7 +445,7 @@ class query_base(dbapi.db_attr):
         #3公司營運面資料
         
         #4公司交易面資料
-        elif category == 4 :
+        elif category == 2 or category == 3 or category == 4 :
             for table_id in self.all_prc_dataset:
                 table_cname = self.get_table_cname(market=self.market,table_name=table_id)       
                 if table_cname is None:
