@@ -87,7 +87,7 @@ class financial_tool(finreport.financial_report,
         if base_date is None:
             base_date = self.dataend_date        
         zdate_interval = self.get_zdate(base_date)
-        print(zdate_interval)
+
         if (self.prc_basedate is not None and 
             self.findata_all is not None):
             
