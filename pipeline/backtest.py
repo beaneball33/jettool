@@ -64,7 +64,7 @@ class backtest_base(method.method_base):
         start_index = 0
         end_index = -1
         if back_interval is not None:
-            if type(back_interval).__name__ == 'int':
+            if isinstance(back_interval,int) is True:
                 #整數型，由最後一天往前推
                 back_interval = max(0 , min(back_interval,len(self.all_zdate_list)-2))
                 temp_back_date = self.all_zdate_list[0] -  numpy.timedelta64(back_interval,'D')
@@ -72,12 +72,14 @@ class backtest_base(method.method_base):
                 print(back_interval)
             #若back_interval有傳入，按照型別處理
 
-            if type(back_interval).__name__ == 'list':
+
+            if isinstance(back_interval,list) is True:
                 #區間型，自動找出對應日期
-                if type(back_interval[0]).__name__ == 'int':
+                
+                if isinstance(back_interval[0],int) is True:
                     start_index = max(0 , back_interval[0])
                     end_index   = max(-1 , back_interval[1])
-                elif type(back_interval[0]).__name__ == 'str':
+                elif isinstance(back_interval[0],str) is True:
                     calstart_date = numpy.datetime64(back_interval[0])
                     for t in range(0,len(self.all_zdate_list)):
                         if self.all_zdate_list[t]<=calstart_date:
@@ -89,7 +91,8 @@ class backtest_base(method.method_base):
                             end_index = t
                             break
 
-            elif type(back_interval).__name__ == 'str':
+
+            if isinstance(back_interval,str) is True:
                 #字串型，轉換為日期使用，找出對應日期
                 calstart_date = numpy.datetime64(back_interval)
                 for t in range(0,len(self.all_zdate_list)):

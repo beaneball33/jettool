@@ -4,12 +4,17 @@ import pandas
 import numpy
 from .. import params
 
-
-
 class query_base(object):
     def __init__(self):
         self.tejapi = tejapi
         self.tablelist = tablelist
+        self.set_params()
+    def set_params(new_param=None):
+        if new_param is None:
+            new_param = params
+        for name in new_param.__dict__:
+            if '__' not in name and not callable(new_param.__dict__.get(name)):   
+                self.__dict__[name] = new_param.__dict__.get(name)
     def set_apikey(self,api_key='yourkey'):
         # 使用者設定api key之後的各種工作
         self.tejapi.ApiConfig.api_key = api_key
