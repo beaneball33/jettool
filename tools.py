@@ -32,9 +32,14 @@ class financial_tool(finreport.financial_report,
         if api_key is not None:
             self.set_apikey(api_key)
         #self.load_data()
+<<<<<<< HEAD
         self.dbapi=dbapi
         self.dbapi.api_key = api_key
     def query_data(self,window,column_names,base_date=None,mkts=['TSE','OTC']):
+=======
+        
+    def query_data(self,window='1m',column_names='收盤價(元)',*,base_date=None,mkts=['TSE','OTC']):
+>>>>>>> 18e6f57ea7c00253caf95647b176c1ad9add0e5a
         
         #自動化處理觀測日期base_date=current_zdate
         if base_date is None:
@@ -79,7 +84,7 @@ class financial_tool(finreport.financial_report,
                                       column_names=column_names_list,
                                       base_date=base_date)[0]
         return df
-    def get_data(self,column_names,window='1d',base_date=None):
+    def get_data(self,column_names='收盤價(元)',*,window='1d',base_date=None):
         #處理查詢欄位名稱
         column_names_list = list(set(column_names))     
         if base_date is None:
@@ -95,7 +100,7 @@ class financial_tool(finreport.financial_report,
                                       column_names=column_names_list,
                                       base_date=base_date)[0]
         return df
-    def check_initial_data(self,mkts=['TSE','OTC']):
+    def check_initial_data(self,*,mkts=['TSE','OTC']):
         #用來初始化查詢用的基本資料
         #取得會計科目表
         if self.accountData is None:
@@ -108,7 +113,7 @@ class financial_tool(finreport.financial_report,
                            base_date=self.dataend_date)
 
 
-    def query_report_data(self,available_cname,mkts=['TSE','OTC'],active_view=False):
+    def query_report_data(self,available_cname='收盤價(元)',*,mkts=['TSE','OTC'],active_view=False):
         # 可以抽象化查詢財報資料，自動整何公告日與財報季別
         
         print('查詢財報資料')
@@ -125,7 +130,7 @@ class financial_tool(finreport.financial_report,
                       active_view=active_view)
         
         print('最大財報資料日期:'+str(self.current_mdate))
-    def find_account_name(self,cname,active_view=False):
+    def find_account_name(self,cname='收盤價(元)',active_view=False):
         #自動整合查詢財報科目，可以查名稱，若沒有則查分類
     
         if self.accountData is None:
@@ -146,15 +151,15 @@ class financial_tool(finreport.financial_report,
                     cname_outcome = numpy.append(cname_outcome,
                                                  cname_outcome_temp)
         return cname_outcome
-    def query_dailydata(self,mkts=['TSE','OTC'],prc_name={}):
+    def query_dailydata(self,*,mkts=['TSE','OTC'],prc_name={}):
         
         if len(prc_name)>0:
 
             self.query_tradedata(prc_name=prc_name)
         
-    def query_macrodata(self,prc_name={}):
+    def query_macrodata(self,*,prc_name={}):
         print('macro')
-    def query_basicdata(self,mkts=['TSE'],base_startdate='2015-12-31'):
+    def query_basicdata(self,*,mkts=['TSE'],base_startdate='2015-12-31'):
         # 基本屬性資料，需要改為抽像化查詢
         
 
@@ -204,7 +209,7 @@ class financial_tool(finreport.financial_report,
             self.input_coids = self.listdata.loc[self.listdata['coid'].isin(self.input_coids),'coid'].values.tolist()
 			
 
-    def query_benchmark(self,benchmark_id=None,base_startdate='2015-12-31',base_date='2019-12-31'):
+    def query_benchmark(self,*,benchmark_id=None,base_startdate='2015-12-31',base_date='2019-12-31'):
         # 績效指標的函式 需要改為抽象化查詢
         
         if benchmark_id is None:
@@ -244,7 +249,7 @@ class financial_tool(finreport.financial_report,
         with open(file_name, 'w') as f:
             json.dump(self.data_attr, f)   
             
-    def load_data(self,file_path=None):
+    def load_data(self,*,file_path=None):
         # 此函式用來把module路徑的暫存檔取出
         if file_path is None:
             dir_name = os.path.dirname(inspect.getfile(dataset))
