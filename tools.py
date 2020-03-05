@@ -32,15 +32,12 @@ class financial_tool(finreport.financial_report,
         if api_key is not None:
             self.set_apikey(api_key)
         #self.load_data()
-<<<<<<< HEAD
+
         self.dbapi=dbapi
         self.dbapi.api_key = api_key
-    def query_data(self,window,column_names,base_date=None,mkts=['TSE','OTC']):
-=======
-        
+
     def query_data(self,window='1m',column_names='收盤價(元)',*,base_date=None,mkts=['TSE','OTC']):
->>>>>>> 18e6f57ea7c00253caf95647b176c1ad9add0e5a
-        
+
         #自動化處理觀測日期base_date=current_zdate
         if base_date is None:
             base_date = self.dataend_date
