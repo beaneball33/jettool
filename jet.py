@@ -16,7 +16,7 @@ import numpy
 import inspect
 import json
 import pandas
-class financial_tool(querybase.query_base,
+class engin(querybase.query_base,
                      backtest.backtest_base):
     """
     此為最外層的tool，規範所有讓使用者直接使用的查詢工具
@@ -26,13 +26,13 @@ class financial_tool(querybase.query_base,
     3.日資料的交易日會以該市場的大盤指數為準，校正交易日、補零
     4.find開頭代表查找某種東西，query開頭代表須要進行api取資料，get代表不進行query在已經取好的資料集中進行資料整合取得
     """
-    def __init__(self,api_key=None):
+    def __init__(self,api_key):
         self.params = params
         for name in params.__dict__:
             if '__' not in name and not callable(params.__dict__.get(name)):   
                 self.__dict__[name] = params.__dict__.get(name)
-        if api_key is not None:
-            self.set_apikey(api_key)
+
+        self.set_apikey(api_key)
         #self.load_data()
 
         self.dbapi=dbapi
