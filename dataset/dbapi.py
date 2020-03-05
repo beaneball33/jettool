@@ -3,10 +3,12 @@ import pandas
 import numpy
 import requests
 import json
-
+api_key = ''
 # 儲存該使用者能存取的所有table的資訊
-def get_info(api_key):
-    tejapi.ApiConfig.api_key = api_key
+def get_info(my_key=None):
+    if my_key is None:
+        my_key = api_key
+    tejapi.ApiConfig.api_key = my_key
     info = tejapi.ApiConfig.info()
     print_info = [
                   '使用者名稱：'+str(info.get('user').get('name'))+'('+str(info.get('user').get('shortName'))+')',
@@ -32,31 +34,34 @@ def set_tablelist(tables):
 
     return api_tables
 # 查詢所有的國別    
-def get_market(api_key):
-    
+def get_market(my_key=None):
+    if my_key is None:
+        my_key = api_key
         
     db_names = ('https://api.tej.com.tw/info/database/list?api_key='
-                +api_key)
+                +my_key)
     response = requests.get(db_names)
     data = json.loads(response.text)['result']
     market_list = data
     return market_list
 # 查詢所有資料分類    
-def get_category(api_key):
-        
+def get_category(my_key=None):
+    if my_key is None:
+        my_key = api_key 
         
     list_names = ('https://api.tej.com.tw/info/category/list?api_key='
-                  +api_key)
+                  +my_key)
     response = requests.get(list_names)
     data = json.loads(response.text)['result']
     category_list = { data[k].get('categoryId'):data[k] for k in data}
     return category_list
 # 查詢按國別分類的資料表完整清單   
-def get_tables(api_key,market=None):
-    
+def get_tables(my_key=None):
+    if my_key is None:
+        my_key = api_key
 
     table_names = ('https://api.tej.com.tw/info/tables/list?api_key='
-                   +api_key)
+                   +my_key)
     response = requests.get(table_names)
     data = json.loads(response.text)['result']
     table_list = {}
@@ -88,7 +93,7 @@ def get_tables(api_key,market=None):
         table_list[market_code] = this_market_table
     return table_list
 
-def get_tables_info(market,table_list):            
+def get_tables_info(*,market='TWN',table_list={}):            
     df = None
     if market is None:            
         for market in table_list:
@@ -111,9 +116,11 @@ def get_tables_info(market,table_list):
 
 
         
-def get_table_mapping(api_key,category_list=None,market='TWN',id='AIND'):
+def get_table_mapping(*,my_key=None,market='TWN',category_list=None,id='AIND'):
+    if my_key is None:
+        my_key = api_key
     if category_list is None:
-        category_list = get_category(api_key)
+        category_list = get_category(my_key)
     #根據已知的table名稱，查詢mapping
     for catefory_index in category_list:
         for tableMap in category_list[catefory_index]['subs']:
@@ -122,8 +129,10 @@ def get_table_mapping(api_key,category_list=None,market='TWN',id='AIND'):
                     market+'/'+id in table.get('tableId')):
                     return tableMap
                     
-def search_column(api_key,market,keyword='報酬率',condition='and',current_market=True):
-    tejapi.ApiConfig.api_key = api_key
+def search_column(*,my_key,market='TWN',keyword='報酬率',condition='and',current_market=True):
+    if my_key is None:
+        my_key = api_key
+    tejapi.ApiConfig.api_key = my_key
     k_name_list = keyword.split(' ')
     k_name = k_name_list[0]
     match_dict = { search['tableId']:search for search in tejapi.search_table(k_name)}
@@ -152,8 +161,11 @@ def search_column(api_key,market,keyword='報酬率',condition='and',current_mar
     match_df = match_df.dropna().reset_index(drop=True)
     current_market
     return match_df
-def get_table_columns(api_key,table_name='TWN/AAPRCDA'):
-    tejapi.ApiConfig.api_key = api_key
+def get_table_columns(*,my_key=None,table_name='TWN/AAPRCDA'):
+    if my_key is None:
+        my_key = api_key
+
+    tejapi.ApiConfig.api_key = my_key
     columns_name = []
     table_info = tejapi.table_info(table_name)
     pk = table_info.get('primaryKey')

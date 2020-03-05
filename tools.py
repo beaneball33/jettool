@@ -32,7 +32,8 @@ class financial_tool(finreport.financial_report,
         if api_key is not None:
             self.set_apikey(api_key)
         #self.load_data()
-        
+        self.dbapi=dbapi
+        self.dbapi.api_key = api_key
     def query_data(self,window,column_names,base_date=None,mkts=['TSE','OTC']):
         
         #自動化處理觀測日期base_date=current_zdate
@@ -158,9 +159,8 @@ class financial_tool(finreport.financial_report,
         
 
         
-        table_maping = dbapi.get_table_mapping(api_key=self.api_key,
+        table_maping = dbapi.get_table_mapping(market='TWN',
                                                category_list=self.category_list,
-                                               market='TWN',
                                                id='AIND').get('tableMap')
         base_table = None
         for table in table_maping:

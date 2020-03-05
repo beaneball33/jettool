@@ -14,12 +14,13 @@ class query_base(object):
         # 使用者設定api key之後的各種工作
         self.tejapi.ApiConfig.api_key = api_key
         self.api_key = api_key
-        self.info = dbapi.get_info(api_key=api_key)
+        dbapi.api_key = self.api_key
+        self.info = dbapi.get_info()
         tables = list(self.info.get('user').get('tables').keys())
         self.api_tables = dbapi.set_tablelist(tables)
-        self.market_list = dbapi.get_market(api_key=api_key)
-        self.category_list = dbapi.get_category(api_key=api_key)
-        self.table_list = dbapi.get_tables(api_key=api_key)
+        self.market_list = dbapi.get_market()
+        self.category_list = dbapi.get_category()
+        self.table_list = dbapi.get_tables()
         # 標準化日資料(有zdate，不需轉置)的查詢工具)，給定欄位名稱就可以查詢
         self.set_query_ordinal()        
         
