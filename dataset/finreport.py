@@ -1,6 +1,8 @@
 from . import querybase
 import pandas
 import numpy
+from .. import params
+
 class financial_report(querybase.query_base):
     """
     本方法用來管理財報資料專屬查詢工具

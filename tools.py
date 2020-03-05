@@ -8,6 +8,7 @@ TODO LIST:
 from . import params
 from . import dataset
 from .dataset import finreport
+from .dataset import dbapi
 from .pipeline import backtest
 import os
 import numpy
@@ -157,7 +158,10 @@ class financial_tool(finreport.financial_report,
         
 
         
-        table_maping = self.get_table_mapping(market='TWN',id='AIND').get('tableMap')
+        table_maping = dbapi.get_table_mapping(api_key=self.api_key,
+                                               category_list=self.category_list,
+                                               market='TWN',
+                                               id='AIND').get('tableMap')
         base_table = None
         for table in table_maping:
             if self.market == table.get('dbCode'):

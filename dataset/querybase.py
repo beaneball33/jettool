@@ -2,37 +2,28 @@
 import tejapi
 import pandas
 import numpy
+from .. import params
 
-tejapi.ApiConfig.api_key = "your_API_key"
 
-class query_base(dbapi.db_attr):
+
+class query_base(object):
     def __init__(self):
         self.tejapi = tejapi
         self.tablelist = tablelist
     def set_apikey(self,api_key='yourkey'):
         # 使用者設定api key之後的各種工作
         self.tejapi.ApiConfig.api_key = api_key
-        self.info = self.get_info()
-        self.set_tablelist(list(self.info.get('user').get('tables').keys()))
-        self.get_market()
-        self.get_category()
-        self.get_tables()
+        self.api_key = api_key
+        self.info = dbapi.get_info(api_key=api_key)
+        tables = list(self.info.get('user').get('tables').keys())
+        self.api_tables = dbapi.set_tablelist(tables)
+        self.market_list = dbapi.get_market(api_key=api_key)
+        self.category_list = dbapi.get_category(api_key=api_key)
+        self.table_list = dbapi.get_tables(api_key=api_key)
         # 標準化日資料(有zdate，不需轉置)的查詢工具)，給定欄位名稱就可以查詢
         self.set_query_ordinal()        
         
-    def get_info(self):
-        #取得使用者api key資訊
-        info = self.tejapi.ApiConfig.info()
-        print_info = [
-                      '使用者名稱：'+str(info.get('user').get('name'))+'('+str(info.get('user').get('shortName'))+')',
-                      '使用權限日期：'+str(info.get('user').get('subscritionStartDate'))+'/'+str(info.get('user').get('subscritionEndDate')),
-                      '日連線次數狀態：'+str(info.get('todayReqCount'))+'/'+str(info.get('reqDayLimit')),
-                      '日查詢資料量狀態：'+str(info.get('todayRows'))+'/'+str(info.get('rowsDayLimit')),
-                      '月查 詢資料量狀態：'+str(info.get('monthRows'))+'/'+str(info.get('rowsMonthLimit')),
-                      ]
-        
-        print(print_info)
-        return info        
+     
         
     def set_market(self,market):
         #設定使用者要查詢的市場
@@ -58,6 +49,62 @@ class query_base(dbapi.db_attr):
             job_list.append({'mdate_up':datastart_date,
                              'mdate_down':self.datastart_date})
         return job_list
+        
+    def set_query_ordinal(self):
+        #按照category_list中的順序，將可查詢的表拼湊
+        tempordinal = []
+
+        # 加入交易屬性類，以頻率決定
+
+        for subcategory in self.category_list.get(4).get('subs'):
+            if len(subcategory.get('tableMap'))>0:
+                for table_attr in subcategory.get('tableMap'):
+                    if table_attr.get('dbCode') == self.market:
+                        table_id = table_attr.get('tableId').split('/')[1]
+                        if table_id in self.api_tables.get(self.market):
+                            table_data = self.table_list.get(self.market)
+                            data_freq = table_data.get(table_id).get('frequency')
+                            if data_freq  in self.all_prc_dataset_freq:
+                                tempordinal.append(table_id)
+
+        # 加入基本屬性類，需要正面表類
+        for subcategory in self.category_list.get(3).get('subs'):
+            if len(subcategory.get('tableMap'))>0:
+                for table_attr in subcategory.get('tableMap'):
+                    if table_attr.get('dbCode') == self.market:
+                        table_id = table_attr.get('tableId').split('/')[1]
+                        if table_id in self.api_tables.get(self.market):
+                            if table_id in self.mdate_name_dict.keys():
+                                mdate_dict = self.mdate_name_dict.get(table_id)
+                                frequency = mdate_dict.get('frequency')
+                                if frequency  in self.all_prc_dataset_freq:
+                                    tempordinal.append(table_id)
+        self.all_prc_dataset = tempordinal
+        # 加入信用風險分析
+
+        for subcategory in self.category_list.get(2).get('subs'):
+            if len(subcategory.get('tableMap'))>0:
+                for table_attr in subcategory.get('tableMap'):
+                    if table_attr.get('dbCode') == self.market:
+                        table_id = table_attr.get('tableId').split('/')[1]
+                        if table_id in self.api_tables.get(self.market):
+                            table_data = self.table_list.get(self.market)
+                            data_freq = table_data.get(table_id).get('frequency')
+                            if data_freq  in self.all_prc_dataset_freq:
+                                tempordinal.append(table_id)
+
+        #管理總經類
+        for coid_map_table in self.macro_mapping_coids:
+            # 逐一檢視設定表內各個TABLE
+            if coid_map_table.get('coid_list') is None:
+                coid_table = coid_map_table.get('coid_table')
+                coid_cname_column = coid_map_table.get('cname')
+                code_data = tejapi.get(coid_table,
+                                      opts={'columns':['coid',coid_cname_column]},
+                                      paginate=True).values.tolist()
+                coid_list = {rows[1]:rows[0] for rows in code_data}
+                coid_map_table['coid_list'] = coid_list
+                
     def get_dataset_name(self,market,table_name):
         # 產生資料表全名
         return '{}/{}'.format(market,table_name)
