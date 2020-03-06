@@ -1,4 +1,10 @@
-﻿from . import dbapi
+﻿"""
+TODO LIST:
+
+1.總經與外匯、利率等單key值轉置控制
+2.記錄各個查詢結果的基本參數：頻率、zdate清單、原始表單與欄位原始實體名稱
+"""
+from . import dbapi
 import tejapi
 import pandas
 import numpy

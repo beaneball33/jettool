@@ -1,3 +1,11 @@
+"""
+此為整合查詢會計報表的工具，使用do_query()為整合查詢函數
+此工具與jet.engine合併使用時，由於jet.engine沒有params，而是直接存在self下的名稱空間
+故必須將兩邊的params同步，先將self下的名稱空間__dict__以finreport.set_params()存入到finreport.params
+執行完finreport任何會改變params的函式後，以jet.engin.set_params()
+將finreport.params回存到self下的名稱空間__dict__
+"""
+
 import tejapi
 import pandas
 import numpy

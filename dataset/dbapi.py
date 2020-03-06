@@ -1,10 +1,14 @@
-﻿import tejapi
+﻿"""
+這是查詢api資料索引目錄的整合工具
+"""
+import tejapi
 import pandas
 import numpy
 import requests
 import json
 api_key = ''
-# 儲存該使用者能存取的所有table的資訊
+
+# 取得該使用者能存取的所有table的資訊
 def get_info(my_key=None):
     if my_key is None:
         my_key = api_key
@@ -19,7 +23,8 @@ def get_info(my_key=None):
                   ]
         
     print(print_info)
-    return info   
+    return info  
+# 取得按照索引目錄分層的完整資料表清單
 def set_tablelist(tables):
         
     api_tables = {}
@@ -93,8 +98,11 @@ def get_tables(my_key=None):
         table_list[market_code] = this_market_table
     return table_list
 
+# 根據索引目錄的資料表清單構造，回傳dataframe方便檢視
 def get_tables_info(*,market='TWN',table_list={}):            
     df = None
+    
+    # 把所有國別資料表都回傳
     if market is None:            
         for market in table_list:
             if df is None:
@@ -106,6 +114,7 @@ def get_tables_info(*,market='TWN',table_list={}):
                                 table_list.get(market),
                                             orient='index'),sort=False)
         return df 
+    # 僅回傳指定國別
     else:
         df = pandas.DataFrame.from_dict(table_list.get(market),orient='index')
          
@@ -115,20 +124,20 @@ def get_tables_info(*,market='TWN',table_list={}):
                               'frequency':'頻率'})
 
 
-        
+# 根據已知的table名稱，查詢mapping到別的國家的資料表清單
 def get_table_mapping(*,my_key=None,market='TWN',category_list=None,id='AIND'):
     if my_key is None:
         my_key = api_key
     if category_list is None:
         category_list = get_category(my_key)
-    #根據已知的table名稱，查詢mapping
+    
     for catefory_index in category_list:
         for tableMap in category_list[catefory_index]['subs']:
             for table in tableMap.get('tableMap'):
                 if (market in table.get('dbCode') and
                     market+'/'+id in table.get('tableId')):
                     return tableMap
-                    
+# 使用tejapi.search_table進行交集或聯集查詢
 def search_column(*,my_key,market='TWN',keyword='報酬率',condition='and',current_market=True):
     if my_key is None:
         my_key = api_key
@@ -161,6 +170,8 @@ def search_column(*,my_key,market='TWN',keyword='報酬率',condition='and',curr
     match_df = match_df.dropna().reset_index(drop=True)
     current_market
     return match_df
+    
+# 取得指定表單的完整欄位表
 def get_table_columns(*,my_key=None,table_name='TWN/AAPRCDA'):
     if my_key is None:
         my_key = api_key
