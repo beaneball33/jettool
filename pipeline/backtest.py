@@ -1,4 +1,4 @@
-﻿import numpy
+import numpy
 import pandas
 from . import method
 import time 

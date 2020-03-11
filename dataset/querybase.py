@@ -1,4 +1,4 @@
-﻿"""
+"""
 TODO LIST:
 
 1.總經與外匯、利率等單key值轉置控制
@@ -78,8 +78,10 @@ class query_base(object):
                             data_freq = table_data.get(table_id).get('frequency')
                             if data_freq  in self.all_prc_dataset_freq:
                                 tempordinal.append(table_id)
+                            else:
+                                print(table_id+':'+data_freq)
 
-        # 加入基本屬性類，需要正面表類
+        # 加入基本屬性類，需要知道mdate真實名稱才會被列入，故需要修改描述表
         for subcategory in self.category_list.get(3).get('subs'):
             if len(subcategory.get('tableMap'))>0:
                 for table_attr in subcategory.get('tableMap'):
@@ -91,9 +93,8 @@ class query_base(object):
                                 frequency = mdate_dict.get('frequency')
                                 if frequency  in self.all_prc_dataset_freq:
                                     tempordinal.append(table_id)
-        self.all_prc_dataset = tempordinal
+    
         # 加入信用風險分析
-
         for subcategory in self.category_list.get(2).get('subs'):
             if len(subcategory.get('tableMap'))>0:
                 for table_attr in subcategory.get('tableMap'):
@@ -104,7 +105,7 @@ class query_base(object):
                             data_freq = table_data.get(table_id).get('frequency')
                             if data_freq  in self.all_prc_dataset_freq:
                                 tempordinal.append(table_id)
-
+        self.all_prc_dataset = tempordinal
         #管理總經類
         for coid_map_table in self.macro_mapping_coids:
             # 逐一檢視設定表內各個TABLE

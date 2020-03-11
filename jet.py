@@ -1,4 +1,4 @@
-﻿"""
+"""
 TODO LIST:
 
 1.query_basicdata需要改為抽象化查詢，改成到各個屬性table找裡面有標記"基本資料"的，但其實目前只有一個TWN的表
@@ -45,7 +45,8 @@ class engin(querybase.query_base,
             if '__' not in param and not callable(new_params.get(param)):   
                 if old_params.get(param) is not None:
                     old_params[param] = new_params.get(param)
-    def query_data(self,window='1m',column_names='收盤價(元)',*,base_date=None,mkts=['TSE','OTC']):
+    def query_data(self,window='1m',column_names='收盤價(元)',*,
+                        base_date=None,mkts=['TSE','OTC']):
 
         #自動化處理觀測日期base_date=current_zdate
         if base_date is None:
@@ -66,7 +67,8 @@ class engin(querybase.query_base,
         #開始檢查各個查詢名稱所屬的資料表
 
         #取出確實存在於會計科目的名稱
-        available_fin_name,column_names = self.get_available_name(column_names_list,category=5)
+        available_fin_name,column_names = self.get_available_name(
+            column_names_list,category=5)
         if len(available_fin_name)>0:
             self.query_report_data(mkts=mkts,available_cname=available_fin_name)
         #取出差異名稱
@@ -74,7 +76,8 @@ class engin(querybase.query_base,
 
         
         #逐一檢查可查詢日資料清單
-        available_prc_name,column_names = self.get_available_name(column_names,category=4)
+        available_prc_name,column_names = self.get_available_name(column_names,
+                                                                  category=4)
         self.available_prc_name = available_prc_name
         self.query_dailydata(prc_name=available_prc_name)
         
@@ -114,7 +117,9 @@ class engin(querybase.query_base,
         self.finreport.inital_report()
 
         self.set_params(self.__dict__,self.finreport.params.__dict__)
-    def query_report_data(self,available_cname='收盤價(元)',*,mkts=['TSE','OTC'],active_view=False):
+    def query_report_data(self,available_cname='收盤價(元)',*,
+                          mkts=['TSE','OTC'],
+                          active_view=False):
         # 可以抽象化查詢財報資料，自動整何公告日與財報季別
         
         print('查詢財報資料')
@@ -128,9 +133,9 @@ class engin(querybase.query_base,
                                        active_view=active_view)
         
         findata_all = self.finreport.do_query(query_code=query_code,
-                                                   query_length = self.query_length,
-                                                   sample_dates=[self.datastart_date,self.dataend_date],
-                                                   active_view=active_view)
+            query_length = self.query_length,
+            sample_dates=[self.datastart_date,self.dataend_date],
+            active_view=active_view)
 
         self.set_params(self.__dict__,self.finreport.params.__dict__)
 
