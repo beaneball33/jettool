@@ -38,6 +38,7 @@ api_tables = {}
 # 可以查詢的日資料清單
 #all_prc_dataset = ['APRCD','AFF_RAW','AMT1','ABSTN1','ASALE']
 all_prc_dataset = []
+all_marco_dataset = []
 all_prc_dataset_freq = ['D','W','S','M','Y','U']
 # 不同table的zdate名稱對照表
 mdate_name_dict = {'ASALE':{'mdate':'annd_s','frequency':'M'},'ABSTN1':{'mdate':'mdate','frequency':'D'},'ACRQMTAB':{'mdate':'rmk_d','frequency':'S'}}

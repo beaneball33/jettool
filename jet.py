@@ -35,7 +35,6 @@ class engine(querybase.query_base,
         self.dbapi=dbapi
         self.dbapi.api_key = api_key
         self.finreport = finreport
-
         self.finreport.api_key = api_key
 
     def query_data(self,window='1m',column_names=['收盤價(元)'],*,
@@ -55,7 +54,7 @@ class engine(querybase.query_base,
                                                 tradeday=False)
         print('資料起始日：'+str(self.datastart_date))
         self.check_initial_data()        
-        
+        print(column_names)
         #處理查詢欄位名稱，分開為有指定table id與沒有指定的
         column_names_list,column_names_record = self.get_column_record(column_names)
 

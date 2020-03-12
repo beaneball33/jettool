@@ -33,7 +33,7 @@ class query_base(object):
         self.market_list = dbapi.get_market()
         self.category_list = dbapi.get_category()
         self.table_list = dbapi.get_tables()
-        # 標準化日資料(有zdate，不需轉置)的查詢工具)，給定欄位名稱就可以查詢
+        # 標準化日資料(有zdate，不需轉置)的查詢工具)，以便給定欄位名稱就可以查詢
         self.set_query_ordinal()        
         
      
@@ -74,11 +74,12 @@ class query_base(object):
                 for table_attr in subcategory.get('tableMap'):
                     if table_attr.get('dbCode') == self.market:
                         table_id = table_attr.get('tableId').split('/')[1]
-                        if table_id in self.api_tables.get(self.market):
-                            table_data = self.table_list.get(self.market)
+                        if table_id in self.api_tables.get(table_attr.get('dbCode')):
+                            table_data = self.table_list.get(table_attr.get('dbCode'))
                             data_freq = table_data.get(table_id).get('frequency')
                             if data_freq  in self.all_prc_dataset_freq:
-                                tempordinal.append(table_id)
+                                dataset_name = '{}/{}'.format(table_attr.get('dbCode'),table_id)
+                                tempordinal.append(dataset_name)
                             else:
                                 print(table_id+':'+data_freq)
 
@@ -88,12 +89,13 @@ class query_base(object):
                 for table_attr in subcategory.get('tableMap'):
                     if table_attr.get('dbCode') == self.market:
                         table_id = table_attr.get('tableId').split('/')[1]
-                        if table_id in self.api_tables.get(self.market):
+                        if table_id in self.api_tables.get(table_attr.get('dbCode')):
                             if table_id in self.mdate_name_dict.keys():
                                 mdate_dict = self.mdate_name_dict.get(table_id)
                                 frequency = mdate_dict.get('frequency')
                                 if frequency  in self.all_prc_dataset_freq:
-                                    tempordinal.append(table_id)
+                                    dataset_name = '{}/{}'.format(table_attr.get('dbCode'),table_id)
+                                    tempordinal.append(dataset_name)
     
         # 加入信用風險分析
         for subcategory in self.category_list.get(2).get('subs'):
@@ -101,35 +103,52 @@ class query_base(object):
                 for table_attr in subcategory.get('tableMap'):
                     if table_attr.get('dbCode') == self.market:
                         table_id = table_attr.get('tableId').split('/')[1]
-                        if table_id in self.api_tables.get(self.market):
-                            table_data = self.table_list.get(self.market)
+                        if table_id in self.api_tables.get(table_attr.get('dbCode')):
+                            table_data = self.table_list.get(table_attr.get('dbCode'))
                             data_freq = table_data.get(table_id).get('frequency')
                             if data_freq  in self.all_prc_dataset_freq:
-                                tempordinal.append(table_id)
+                                dataset_name = '{}/{}'.format(table_attr.get('dbCode'),table_id)
+                                tempordinal.append(dataset_name)
         self.all_prc_dataset = tempordinal
-        #管理總經類
-        for coid_map_table in self.macro_mapping_coids:
+        tempmarco = []
+        
+        #管理總經類GLOBAL
+        for subcategory in self.category_list.get(1).get('subs'):
             # 逐一檢視設定表內各個TABLE
-            if coid_map_table.get('coid_list') is None:
-                coid_table = coid_map_table.get('coid_table')
-                coid_cname_column = coid_map_table.get('cname')
-                code_data = tejapi.get(coid_table,
-                                      opts={'columns':['coid',coid_cname_column]},
-                                      paginate=True).values.tolist()
-                coid_list = {rows[1]:rows[0] for rows in code_data}
-                coid_map_table['coid_list'] = coid_list
+            if len(subcategory.get('tableMap'))>0:
+                for table_attr in subcategory.get('tableMap'):
+                    if table_attr.get('dbCode') == 'GLOBAL':
+                        table_id = table_attr.get('tableId').split('/')[1]
+                        if table_id in self.api_tables.get(table_attr.get('dbCode')):
+                            table_data = self.table_list.get(table_attr.get('dbCode'))
+                            dataset_name = '{}/{}'.format(table_attr.get('dbCode'),table_id)
+                            tempmarco.append(dataset_name)
+                                                        
+        """     
+                if coid_map_table.get('coid_list') is None:
+                    coid_table = coid_map_table.get('coid_table')
+                    coid_cname_column = coid_map_table.get('cname')
+                    code_data = tejapi.get(coid_table,
+                                          opts={'columns':['coid',coid_cname_column]},
+                                          paginate=True).values.tolist()
+                    coid_list = {rows[1]:rows[0] for rows in code_data}
+                    coid_map_table['coid_list'] = coid_list
+        """
+        self.all_marco_dataset = tempmarco
                 
     def get_dataset_name(self,table_name:str) -> str:
         # 產生資料表全名
+
+        dataset_name = table_name
         
-        dataset_name = '{}/{}'.format(self.market,table_name)
         if self.table_info.get(dataset_name) is None:
             try:
                 self.table_info[dataset_name] = self.tejapi.table_info(dataset_name)
             except (RuntimeError, TypeError, NameError):
                 # 代表不是有資料而是對照表，略過
                 self.table_info[dataset_name] = None        
-        
+                print(dataset_name+':table info error')
+                
         return dataset_name
         
     def query_data_with_date_coid(self,
@@ -178,7 +197,7 @@ class query_base(object):
         command_line_str = ''.join(command_line)
 
         exec(command_line_str, context)
-    def get_table_cname(self,table_name:str = 'APRCD',language:str = 'cname') -> str:
+    def get_table_cname(self,table_name:str = 'TWN/APRCD',language:str = 'cname') -> str:
     
         # 取得table名稱並同時透過api查詢該table的資訊
         dataset_name = self.get_dataset_name(table_name)
@@ -190,12 +209,12 @@ class query_base(object):
             cols['name'] for cols in table_info['columns'].values()]
         self.table_info[dataset_name] = table_info
         return self.table_info[dataset_name]['name']
-    def get_table_key(self,table_name:str = 'APRCD') -> list:
+    def get_table_key(self,table_name:str = 'TWN/APRCD') -> list:
     
         dataset_name = self.get_dataset_name(table_name)
         return self.table_info[dataset_name]['primaryKey']
         
-    def compare_column_name(self,table_name:str = 'APRCD',
+    def compare_column_name(self,table_name:str = 'TWN/APRCD',
                                 query_columns:list = ['收盤價(元)'],
                                 kind:str = 'cname'):
         # 比較指定資料表單中是否存在某個欄位名稱
@@ -237,7 +256,7 @@ class query_base(object):
             print('lack columns:')
             print(left_name)
         return ans_code,ans_name        
-    def get_column_name(self,table_name:str = 'APRCD',
+    def get_column_name(self,table_name:str = 'TWN/APRCD',
                         language:str = 'cname') -> dict:
         # 取得欄位的中文名稱，以便用來把欄位實體名稱改為中文
         dataset_name = self.get_dataset_name(table_name)
@@ -270,10 +289,19 @@ class query_base(object):
         column_record = []
         column_list = []
         for column in column_names:
+            
             if type(column) is str:
                 column_list.append(column)
             elif type(column) is dict:
-                column_record.append(column)
+                column_id = column.get('id').split('/')           
+                column_market = column_id[0]
+                column_codes = column_id[1]
+
+                if column_market in self.market or column_market in 'GLOBAL':
+                   
+                    column_record.append(column)
+                else:
+                    print(column.get('id')+': inconsistent db code')
         column_list = list(set(column_list)) 
         return column_list,column_record
         
@@ -424,6 +452,7 @@ class query_base(object):
         #for table_name in self.all_prc_dataset:
         for table_attr in prc_name:
             table_name = table_attr.get('id')
+            print(table_name)
             available_cname = table_attr.get('columns_cname')
             if table_name in self.all_prc_dataset is None:
                 print("沒有存取權限："+table_name)
