@@ -8,6 +8,7 @@ from . import dbapi
 import tejapi
 import pandas
 import numpy
+import re
 from .. import params
 
 class query_base(object):
@@ -243,20 +244,26 @@ class query_base(object):
         self.current_coids = df.loc[(df['zdate']==self.current_zdate),['zdate','coid']]
         self.listed_coids = df.loc[
             (df['zdate']==self.current_zdate)&(df['coid'].isin(listed_coids)),'coid'
-            ].values.tolist()    
+            ].values.tolist()
+
+    def get_window(self, window:str = '4Q') -> list:
+        """
+        check input window is begin with number and end with D(day), W(week), M(month), Q(quanter) or Y(year)
+        return a list with [int, str]: [4, 'Q']
+        """
+        window = window.upper()
+        match = re.match(r"^([0-9.]+)([DWMQY]{1}$)", window)
+        if bool(match):
+            return [int(match.group(1)), match.group(2)]
+
     def cal_zdate_by_window(self,window,base_date,peer_future=False,tradeday=True):
         # 計算指定移動窗口以前的zdate
     
-        if 'q' not in window:
-            if 'd'  in window:
-                this_window_type = 'D'
-                window = int(window.replace('d',''))
-            elif 'w'  in window:
-                this_window_type = 'W'
-                window = int(window.replace('w',''))
-            elif 'm'  in window:
-                this_window_type = 'M'
-                window = int(window.replace('m',''))
+        match_window = get_window(window=window)
+        window = match_window[0]
+        this_window_type = match_window[1]
+
+        if this_window_type != 'Q':
             jump_length = window if peer_future is False else -1*window
             next_base_date = self.cal_zdate(
                                   base_date=base_date,jump_length=jump_length,
@@ -536,3 +543,4 @@ class query_base(object):
         #9試用
     
         return available_cname,column_names
+
