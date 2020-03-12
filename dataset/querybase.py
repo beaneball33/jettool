@@ -14,15 +14,14 @@ from .. import params
 class query_base(object):
     def __init__(self):
         self.tejapi = tejapi
-        self.tablelist = tablelist
-        self.set_params()
-    def set_params(new_param=None):
-        if new_param is None:
-            new_param = params
-        for name in new_param.__dict__:
-            if '__' not in name and not callable(new_param.__dict__.get(name)):   
-                self.__dict__[name] = new_param.__dict__.get(name)
-    def set_apikey(self,api_key='yourkey'):
+        self.set_params(params.__dict__,allow_null=True)
+    def set_params(self,new_params:dict,allow_null=False):
+        for param in new_params:
+            if '__' not in param and not callable(new_params.get(param)):   
+                if self.__dict__.get(param) is not None or allow_null is True:
+                    self.__dict__[param] = new_params.get(param)
+                    
+    def set_apikey(self,api_key:str = 'yourkey'):
         # 使用者設定api key之後的各種工作
         self.tejapi.ApiConfig.api_key = api_key
         self.api_key = api_key
@@ -38,7 +37,7 @@ class query_base(object):
         
      
         
-    def set_market(self,market):
+    def set_market(self,market:str):
         #設定使用者要查詢的市場
         self.market = market
 
@@ -119,17 +118,26 @@ class query_base(object):
                 coid_list = {rows[1]:rows[0] for rows in code_data}
                 coid_map_table['coid_list'] = coid_list
                 
-    def get_dataset_name(self,market,table_name):
+    def get_dataset_name(self,table_name:str) -> str:
         # 產生資料表全名
-        return '{}/{}'.format(market,table_name)
+        
+        dataset_name = '{}/{}'.format(self.market,table_name)
+        if self.table_info.get(dataset_name) is None:
+            try:
+                self.table_info[dataset_name] = self.tejapi.table_info(dataset_name)
+            except (RuntimeError, TypeError, NameError):
+                # 代表不是有資料而是對照表，略過
+                self.table_info[dataset_name] = None        
+        
+        return dataset_name
         
     def query_data_with_date_coid(self,
-            market='TWN',table_name='APRCD',query_coid=['2330'],
-            mdate_up='2019-12-31',mdate_down='2018-12-31',mdate_name='mdate',
-            query_columns=['coid','mdate'],rename_columns=None):
+            table_name:str = 'APRCD',query_coid:list = ['2330'],
+            mdate_up:str = '2019-12-31',mdate_down:str = '2018-12-31',mdate_name:str = 'mdate',
+            query_columns=['coid','mdate'],rename_columns=None) -> pandas.DataFrame:
         # 根據給定資料表名稱與條件，動態產生查詢式
         
-        dataset_name = self.get_dataset_name(market,table_name)
+        dataset_name = self.get_dataset_name(table_name)
         
         self.tempdata = None
         
@@ -163,33 +171,35 @@ class query_base(object):
             self.tempdata = self.tempdata.rename(index=str, columns=rename_columns)
 
         return self.tempdata
-    def exec_tool(self,context,command_line):
+    def exec_tool(self,context:dict,command_line:list):
         context['self'] = self
         context['__name__'] = '__main__'
         command_line_str = ''.join(command_line)
 
         exec(command_line_str, context)
-    def get_table_cname(self,market='TWN',table_name='APRCD',language='cname'):
+    def get_table_cname(self,table_name:str = 'APRCD',language:str = 'cname') -> str:
+    
         # 取得table名稱並同時透過api查詢該table的資訊
-        dataset_name = self.get_dataset_name(market,table_name)
+        dataset_name = self.get_dataset_name(table_name)
         
-        if self.table_info.get(dataset_name) is None:
-            try:
-                table_info = self.tejapi.table_info(dataset_name)
-            except (RuntimeError, TypeError, NameError):
-                # 代表不是有資料而是對照表，略過
-                return None
-            table_info['columns_cname'] = [ 
-                cols['cname'] for cols in table_info['columns'].values()]
-            table_info['columns_name'] = [
-                cols['name'] for cols in table_info['columns'].values()]
-            self.table_info[dataset_name] = table_info
+        table_info = self.table_info.get(dataset_name)
+        table_info['columns_cname'] = [ 
+            cols['cname'] for cols in table_info['columns'].values()]
+        table_info['columns_name'] = [
+            cols['name'] for cols in table_info['columns'].values()]
+        self.table_info[dataset_name] = table_info
         return self.table_info[dataset_name]['name']
-
-    def compare_column_name(self,market,table_name,query_columns,kind='cname'):
+    def get_table_key(self,table_name:str = 'APRCD') -> list:
+    
+        dataset_name = self.get_dataset_name(table_name)
+        return self.table_info[dataset_name]['primaryKey']
+        
+    def compare_column_name(self,table_name:str = 'APRCD',
+                                query_columns:list = ['收盤價(元)'],
+                                kind:str = 'cname'):
         # 比較指定資料表單中是否存在某個欄位名稱
     
-        dataset_name = self.get_dataset_name(market,table_name)
+        dataset_name = self.get_dataset_name(table_name)
         all_columns = self.table_info[dataset_name]['columns']
         ans_code = []
         ans_name = []
@@ -226,16 +236,47 @@ class query_base(object):
             print('lack columns:')
             print(left_name)
         return ans_code,ans_name        
-    def get_column_name(self,market='TWN',table_name='APRCD',language='cname'):
+    def get_column_name(self,table_name:str = 'APRCD',
+                        language='cname') -> dict:
         # 取得欄位的中文名稱，以便用來把欄位實體名稱改為中文
-        dataset_name = self.get_dataset_name(market,table_name)
+        dataset_name = self.get_dataset_name(table_name)
         
-        table_cname = self.get_table_cname(market=market,table_name=table_name)
+        table_cname = self.get_table_cname(table_name=table_name)
         table_info = self.table_info.get(dataset_name)
 
         return {'columns_cname':table_info['columns_cname'],
                 'columns_name':table_info['columns_name']}
-    def set_listed_coid(self,df):
+                
+    def combine_column_record(self,column_record):
+        column_record_dict = {}
+        fin_dict = None
+        fin_table_id = self.account_table.get(self.market).get('data')
+        for row in column_record:
+            table_id = row.get('id')
+            if fin_table_id == table_id:
+                fin_dict = row
+            else:
+                if column_record_dict.get(table_id) is None:
+                    column_record_dict[table_id] = row.get('columns_cname')
+                else:
+                    column_record_dict[table_id] = list(set(column_record_dict[table_id] + 
+                                                    row.get('columns_cname')))
+        column_record = [{'id':table_id,'columns_cname':column_record_dict.get(table_id)}
+                        for table_id in column_record_dict.keys()]
+        return column_record,fin_dict
+        
+    def get_column_record(self,column_names:list):
+        column_record = []
+        column_list = []
+        for column in column_names:
+            if type(column) is str:
+                column_list.append(column)
+            elif type(column) is dict:
+                column_record.append(column)
+        column_list = list(set(column_list)) 
+        return column_list,column_record
+        
+    def set_listed_coid(self,df:pandas.DataFrame):
         # 透過basic_info中的上市股票名單取得coid
         
         listed_coids = self.basic_info.loc[
@@ -259,7 +300,7 @@ class query_base(object):
     def cal_zdate_by_window(self,window,base_date,peer_future=False,tradeday=True):
         # 計算指定移動窗口以前的zdate
     
-        match_window = get_window(window=window)
+        match_window = self.get_window(window=window)
         window = match_window[0]
         this_window_type = match_window[1]
 
@@ -364,7 +405,7 @@ class query_base(object):
         current_data[column_names] = current_data[column_names].replace(
                                                                 [numpy.inf, -numpy.inf], numpy.nan)
         return current_data ,this_window_type, window
-    def query_tradedata(self,mkts=['TSE','OTC'],prc_name=[]):
+    def query_tradedata(self,prc_name=[]):
     
 
         print('查詢日資料 最大資料日期:'+str(self.dataend_date))
@@ -410,13 +451,12 @@ class query_base(object):
                 full_query = True
             if available_cname is not None:
                 #在此table尋找可用的欄位
-                available_code,available_cname = self.compare_column_name(market=self.market,
-                                                                          table_name=table_name,
+                available_code,available_cname = self.compare_column_name(table_name=table_name,
                                                                           query_columns=available_cname)
 
                 rename_set = { available_code[i]:available_cname[i] 
                                    for i in range(0,len(available_code))}      
-                table_cname = self.get_table_cname(market=self.market,table_name=table_name)       
+                table_cname = self.get_table_cname(table_name=table_name)       
                 print(table_cname+' 重新查詢:'+str(full_query))    
                 for data_interval in job_list:
                     mdate_up = data_interval['mdate_up']     
@@ -425,7 +465,7 @@ class query_base(object):
                     
                     if full_query is False:
                         self.append_list = self.append_list + available_cname                    
-                    queried_data = self.query_data_with_date_coid(market=self.market,
+                    queried_data = self.query_data_with_date_coid(
                                                                   table_name=table_name,
                                                                   query_coid=self.input_coids,
                                                                   mdate_up=mdate_up,
@@ -514,11 +554,11 @@ class query_base(object):
         #4公司交易面資料
         elif category == 2 or category == 3 or category == 4 :
             for table_id in self.all_prc_dataset:
-                table_cname = self.get_table_cname(market=self.market,table_name=table_id)       
+                table_cname = self.get_table_cname(table_name=table_id)       
                 if table_cname is None:
                     continue
                 
-                available_items = self.get_column_name(market=self.market,table_name=table_id)
+                available_items = self.get_column_name(table_name=table_id)
                 
                 columns_cname = available_items.get('columns_cname')
                 columns_cname = numpy.intersect1d(column_names,columns_cname).tolist()
@@ -531,7 +571,7 @@ class query_base(object):
             columns_cname = self.accountData.loc[
                 self.accountData['cname'].isin(column_names),['code','ename','cname']
                 ].drop_duplicates(subset=['code'],keep='last')
-            columns_cname = columns_cname['cname'].values        
+            columns_cname = columns_cname['cname'].values.tolist()     
             column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
             available_cname = [{'id':'fin','columns_cname':columns_cname}]
         #6基金資料庫
