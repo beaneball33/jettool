@@ -15,6 +15,7 @@ class query_base(object):
     def __init__(self):
         self.tejapi = tejapi
         self.set_params(params.__dict__,allow_null=True)
+        
     def set_params(self,new_params:dict,allow_null=False):
         for param in new_params:
             if '__' not in param and not callable(new_params.get(param)):   
@@ -216,7 +217,7 @@ class query_base(object):
             print('lack columns:')
             print(left_name)
         return ans_code,ans_name
-    def compare_code_name(self,table_name,query_columns):
+    def compare_code_name(self,table_name:str,query_columns:list):
         # 比較指定代碼表單中是否存在某個代碼名稱
     
         coid_list = None
@@ -237,7 +238,7 @@ class query_base(object):
             print(left_name)
         return ans_code,ans_name        
     def get_column_name(self,table_name:str = 'APRCD',
-                        language='cname') -> dict:
+                        language:str = 'cname') -> dict:
         # 取得欄位的中文名稱，以便用來把欄位實體名稱改為中文
         dataset_name = self.get_dataset_name(table_name)
         
@@ -247,7 +248,7 @@ class query_base(object):
         return {'columns_cname':table_info['columns_cname'],
                 'columns_name':table_info['columns_name']}
                 
-    def combine_column_record(self,column_record):
+    def combine_column_record(self,column_record:list):
         column_record_dict = {}
         fin_dict = None
         fin_table_id = self.account_table.get(self.market).get('data')
@@ -297,7 +298,8 @@ class query_base(object):
         if bool(match):
             return [int(match.group(1)), match.group(2)]
 
-    def cal_zdate_by_window(self,window,base_date,peer_future=False,tradeday=True):
+    def cal_zdate_by_window(self,window,base_date:str,
+                                 peer_future:bool = False,tradeday:bool = True):
         # 計算指定移動窗口以前的zdate
     
         match_window = self.get_window(window=window)
@@ -312,7 +314,7 @@ class query_base(object):
         next_base_date = numpy.array([next_base_date]).astype('datetime64')[0]
 
         return this_window_type,next_base_date,window
-    def get_zdate(self,base_date):
+    def get_zdate(self,base_date:str) ->list:
 
         base_date = numpy.datetime64(base_date) 
         last_zdate = numpy.datetime64(base_date) 
@@ -324,13 +326,13 @@ class query_base(object):
             
         return [zdate,last_zdate]
     def get_activedate_data(self,
-            window,column_names,peer_future=False,
-            base_date=None,base_mdate=None
-            ,clue_length=None,keep='first'):
+            window:str = '3m',column_names:list = ['zdate','mdate','coid'],
+            peer_future:bool = False,base_date:str = None,base_mdate:str = None,
+            clue_length:int = None,keep:str = 'first'):
         # 根據window取得某些欄位資料
         
         current_data = None
-        column_names = ['zdate','mdate','coid']+column_names
+        column_names = list(set(['zdate','mdate','coid']+column_names))
         df = self.all_date_data
         if self.all_date_data is None:
             df = self.prc_basedate
@@ -509,7 +511,7 @@ class query_base(object):
             self.prc_basedate = self.fullquery_prc_basedate.merge(self.prc_basedate,
                                                         on=['zdate','coid'],how='left')
             self.prc_basedate = self.prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
-    def create_prc_base(self,query_coids=None,benchmark=False):
+    def create_prc_base(self,query_coids:list=None,benchmark:bool=False) -> pandas.DataFrame:
         # 透過績效指標的交易日用來產生有考慮上市日的coid+zdate集合，藉此校正資料
         
         prc_basedate = None
