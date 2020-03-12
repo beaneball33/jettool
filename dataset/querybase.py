@@ -405,7 +405,7 @@ class query_base(object):
         current_data[column_names] = current_data[column_names].replace(
                                                                 [numpy.inf, -numpy.inf], numpy.nan)
         return current_data ,this_window_type, window
-    def query_tradedata(self,prc_name=[]):
+    def query_tradedata(self,prc_name:list = []):
     
 
         print('查詢日資料 最大資料日期:'+str(self.dataend_date))
@@ -532,7 +532,7 @@ class query_base(object):
             prc_basedate = prc_basedate.reindex(columns=['coid','zdate'])
         return prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
         
-    def get_available_name(self,column_names,category=5):
+    def get_available_name(self,column_names:list,category:int = 5):
         available_cname = []
         # 用來查出可以用的欄位
         #1總經
