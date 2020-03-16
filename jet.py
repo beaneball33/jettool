@@ -54,37 +54,41 @@ class engine(querybase.query_base,
                                                 tradeday=False)
         print('資料起始日：'+str(self.datastart_date))
         self.check_initial_data()        
-        print(column_names)
+
         #處理查詢欄位名稱，分開為有指定table id與沒有指定的
         column_names_list,column_names_record = self.get_column_record(column_names)
 
-        #將record檢查重覆，並轉出財務dict
-        column_names_record,column_fin_dict = self.combine_column_record(column_record=column_names_record)
-        #開始檢查各個查詢名稱所屬的資料表
+        #取出確實存在的欄位名稱，分table名存放
+        available_record,column_names_list = self.get_available_name(column_names_list)
+        if len(column_names_record)>0:
+            available_record = available_record + column_names_record
+
+        #將record檢查重覆，並
+        column_dict = self.combine_column_record(column_record=available_record)
+
+        
 
         #取出確實存在於會計科目的名稱
-        available_fin_record,column_names_list = self.get_available_name(
-            column_names_list,category=5)
-        if column_fin_dict is not None:
-            column_fin_dict['columns_cname'] = list(set(column_fin_dict['columns_cname'] + 
-                                               available_fin_record[0].get('columns_cname')
-                                               ))
-        else:
-            column_fin_dict = available_fin_record[0]
-        if len(column_fin_dict)>0:
-            self.available_fin_record = column_fin_dict
-            self.query_report_data(available_cname=column_fin_dict)
-        #取出差異名稱
+        fin_dict = column_dict.get('fin')
 
+        if fin_dict is not None:
+            fin_record = [{'id':table_id,'columns_cname':fin_dict.get(table_id)}
+                                for table_id in fin_dict.keys()][0]
 
-        self.column_names_list = column_names_list
+            self.query_report_data(available_cname=fin_record)
+
         #逐一檢查可查詢日資料清單
-        available_prc_name,column_names_list = self.get_available_name(column_names_list,
-                                                                  category=4)
-        column_names_record = column_names_record+available_prc_name                                          
-        column_names_record,column_fin_dict = self.combine_column_record(column_record=column_names_record)
-        self.available_prc_name = column_names_record
-        self.query_dailydata(prc_name=column_names_record)
+        macro_dict = column_dict.get('macro')
+        if macro_dict is not None:
+            macro_record = [{'id':table_id,'columns_cname':macro_dict.get(table_id)}
+                                for table_id in macro_dict.keys()]        
+            self.query_timeseries(prc_name=macro_record)   
+        
+        trade_dict = column_dict.get('trade')
+        if trade_dict is not None:
+            trade_record = [{'id':table_id,'columns_cname':trade_dict.get(table_id)}
+                                for table_id in trade_dict.keys()]        
+            self.query_tradedata(prc_name=trade_record)
         
         #查詢完畢，更新設定值
         self.set_data_attr()
@@ -176,7 +180,7 @@ class engine(querybase.query_base,
                                                  cname_outcome_temp)
         self.set_params(self.finreport.params.__dict__)
         return cname_outcome
-    def query_dailydata(self,*,prc_name={}):
+    def query_tradedata(self,*,prc_name={}):
         #產生標準交易日期資料
 
         self.append_list = []
@@ -184,10 +188,17 @@ class engine(querybase.query_base,
         self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
         if len(prc_name)>0:
-            self.query_tradedata(query_list=prc_name)
+            self.query_dailydata(query_list=prc_name)
+    def query_timeseries(self,*,prc_name={}):
+        #產生標準交易日期資料
+
+        self.append_list = []
+        self.part_query_interval = self.get_query_interval()
+        self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
-    def query_macrodata(self,*,prc_name={}):
-        print('macro')
+        if len(prc_name)>0:
+            self.query_macrometa(query_list=prc_name)        
+
     def query_basicdata(self,*,base_startdate='2015-12-31'):
         # 基本屬性資料，需要改為抽像化查詢
         

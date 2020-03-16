@@ -82,8 +82,7 @@ class query_base(object):
                             if data_freq  in self.all_prc_dataset_freq:
 
                                 tempordinal.append(table_name)
-                            else:
-                                print(table_id+':'+data_freq)
+ 
 
         # 加入基本屬性類，需要知道mdate真實名稱才會被列入，故需要修改描述表
         for subcategory in self.category_list.get(3).get('subs'):
@@ -193,13 +192,13 @@ class query_base(object):
                    "mdate_down":mdate_down,"mdate_up":mdate_up,
                    "query_columns":query_columns}
                    
-        
-        self.exec_tool(context,command_line)
 
+        self.exec_tool(context,command_line)
+        
         #data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
         self.tempdata['zdate'] = self.tempdata['zdate'].astype(str).astype('datetime64')
-        if rename_columns is not None:
 
+        if rename_columns is not None:
             self.tempdata = self.tempdata.rename(index=str, columns=rename_columns)
 
         return self.tempdata
@@ -280,44 +279,7 @@ class query_base(object):
         return {'columns_cname':table_info['columns_cname'],
                 'columns_name':table_info['columns_name']}
                 
-    def combine_column_record(self,column_record:list):
-        column_record_dict = {}
-        fin_dict = None
-        fin_table_id = self.account_table.get(self.market).get('data')
-        for row in column_record:
-            table_id = row.get('id')
-            if fin_table_id == table_id:
-                fin_dict = row
-            else:
-                if column_record_dict.get(table_id) is None:
-                    column_record_dict[table_id] = row.get('columns_cname')
-                else:
-                    column_record_dict[table_id] = list(set(column_record_dict[table_id] + 
-                                                    row.get('columns_cname')))
-        column_record = [{'id':table_id,'columns_cname':column_record_dict.get(table_id)}
-                        for table_id in column_record_dict.keys()]
-        return column_record,fin_dict
-        
-    def get_column_record(self,column_names:list):
-        column_record = []
-        column_list = []
-        for column in column_names:
-            
-            if type(column) is str:
-                column_list.append(column)
-            elif type(column) is dict:
-                column_id = column.get('id').split('/')           
-                column_market = column_id[0]
-                column_codes = column_id[1]
 
-                if column_market in self.market or column_market in 'GLOBAL':
-                   
-                    column_record.append(column)
-                else:
-                    print(column.get('id')+': inconsistent db code')
-        column_list = list(set(column_list)) 
-        return column_list,column_record
-        
     def set_listed_coid(self,df:pandas.DataFrame):
         # 透過basic_info中的上市股票名單取得coid
         
@@ -498,7 +460,7 @@ class query_base(object):
                                            mdate_name=mdate_name,
                                            query_columns=query_columns,
                                            rename_columns=rename_set)
-
+            
             if len(queried_data)>0:
                 if temp_data is None:
                     temp_data = queried_data
@@ -508,7 +470,7 @@ class query_base(object):
         
     # 此方法用來控制查詢機制，以便查詢交易資料，並控制查完的整併
     #
-    def query_tradedata(self,query_list:list = []):
+    def query_dailydata(self,query_list:list = []):
         partquery_prc_basedate = self.create_prc_base()
         fullquery_prc_basedate = partquery_prc_basedate.reindex(columns=['coid','zdate']).copy()
         print('查詢日交易資料 最大資料日期:'+str(self.dataend_date))
@@ -577,8 +539,8 @@ class query_base(object):
     # 此方法用來控制查詢機制，以便查詢交易資料，並控制查完的整併
     #
     def query_macrometa(self,query_list:list = []):
-        partquery_prc_basedate = self.create_prc_base()
-        fullquery_prc_basedate = partquery_prc_basedate.reindex(columns=['coid','zdate']).copy()
+        partquery_prc_basedate = self.create_prc_base(has_coid=False)
+        fullquery_prc_basedate = partquery_prc_basedate.copy()
         print('查詢日交易資料 最大資料日期:'+str(self.dataend_date))
 
         #for table_name in self.all_marco_dataset
@@ -595,16 +557,17 @@ class query_base(object):
             #在此table尋找可用的欄位
             for available_cname in available_cnames:
                 this_mapping_table = self.macro_mapping_coids.get(table_name).get('fullname_map')
-                available_coid = this_mapping_table.get(available_cname).get('coid')
+                available_coid = [this_mapping_table.get(available_cname).get('coid')]
                 available_col = [this_mapping_table.get(available_cname).get('val')]
             
                 temp_data = None
-                if len(available_code)>0:
+                if len(available_coid)>0:
+
                     #判斷是否要重新查詢
-                    available_cname = [available_cname]
+                    available_cname_list = [available_cname]
                     full_query = self.check_full_query(table_name=table_name,
-                                                       target_dataframe=self.prc_basedate,
-                                                       available_cname=available_cname)   
+                                                       target_dataframe=self.macro_basedate,
+                                                       available_cname=available_cname_list)   
                     #設定查詢完畢更名的邏輯                
                     rename_set = {'val':available_cname} 
                                
@@ -615,57 +578,62 @@ class query_base(object):
                                                     query_coid=available_coid,
                                                     rename_set=rename_set,
                                                     full_query=full_query)
-
+                    
                 #各日期查詢完畢 開始組裝            
                 if temp_data is not None:
+                    temp_data = temp_data.drop(columns=['coid'])
                     if full_query is True:
-                        fullquery_prc_basedate = fullquery_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
+                        fullquery_prc_basedate = fullquery_prc_basedate.merge(temp_data,on=['zdate'],how='outer')
                     else:
-                        partquery_prc_basedate = partquery_prc_basedate.merge(temp_data,on=['zdate','coid'],how='left')
-            
-        if self.prc_basedate is None:
-            self.prc_basedate = fullquery_prc_basedate
+                        partquery_prc_basedate = partquery_prc_basedate.merge(temp_data,on=['zdate'],how='outer')
+
+        if self.macro_basedate is None:
+            self.macro_basedate = fullquery_prc_basedate
         else:
             #先進行刪除，再append，再進行merge
-            append_columns = ['zdate','coid'] + self.append_list
-            self.prc_basedate = self.prc_basedate.reindex(columns=append_columns)
+            append_columns = ['zdate'] + self.append_list
+            self.macro_basedate = self.macro_basedate.reindex(columns=append_columns)
 
             #要分段append，避免重複
             for data_interval in self.part_query_interval:
                 temp_data = partquery_prc_basedate.loc[(partquery_prc_basedate['zdate']<data_interval['mdate_up'])&
                                             (partquery_prc_basedate['zdate']>=data_interval['mdate_down']),
                                             append_columns]
-                self.prc_basedate = self.prc_basedate.append(temp_data,sort=False)
-            self.prc_basedate = self.prc_basedate.drop_duplicates(subset=['coid','zdate'],keep='last')
-            self.prc_basedate = self.prc_basedate.sort_values(by=['coid','zdate'],
+                self.macro_basedate = self.macro_basedate.append(temp_data,sort=False)
+            self.macro_basedate = self.macro_basedate.drop_duplicates(subset=['zdate'],keep='last')
+            self.macro_basedate = self.macro_basedate.sort_values(by=['zdate'],
                                                               ascending=True).reset_index(drop=True)
 
-            self.prc_basedate = fullquery_prc_basedate.merge(self.prc_basedate,
-                                                        on=['zdate','coid'],how='left')
-            self.prc_basedate = self.prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
+            self.macro_basedate = fullquery_prc_basedate.merge(self.macro_basedate,
+                                                        on=['zdate'],how='outer')
+            self.macro_basedate = self.macro_basedate.sort_values(by=['zdate'], ascending=True).reset_index(drop=True)
             
-    def create_prc_base(self,query_coids:list=None,benchmark:bool=False) -> pandas.DataFrame:
+    def create_prc_base(self,query_coids:list=None,benchmark:bool=False,has_coid:bool=True) -> pandas.DataFrame:
         # 透過績效指標的交易日用來產生有考慮上市日的coid+zdate集合，藉此校正資料
         
         prc_basedate = None
-        if query_coids is None:
-            query_coids = self.input_coids
-        for query_coid in query_coids:
-            list_day1 = self.basic_info.loc[self.basic_info['coid']==query_coid,'list_day1'].values[0]
+        if has_coid is False:
+            prc_basedate = self.benchmark_roi.reindex(columns=['zdate']).copy()
+            return prc_basedate.sort_values(by=['zdate'], ascending=True).reset_index(drop=True)
+        else:
+            if query_coids is None:
+                query_coids = self.input_coids
+            for query_coid in query_coids:
+                list_day1 = self.basic_info.loc[self.basic_info['coid']==query_coid,'list_day1'].values[0]
 
-            this_prc_basedate = self.benchmark_roi[(self.benchmark_roi['zdate']>=list_day1)].copy()
-            if int(self.basic_info.loc[self.basic_info['coid']==query_coid,'list_day2'].isnull().values[0])==0:
-                list_day2 = self.basic_info.loc[self.basic_info['coid']==query_coid,'list_day2'].values[0]       
-                this_prc_basedate = self.benchmark_roi[(self.benchmark_roi['zdate']<=list_day2)].copy()                
-            #要補上代碼，否則仍是空值
-            this_prc_basedate['coid'] = query_coid
-            if prc_basedate is None:
-                prc_basedate = this_prc_basedate
-            else:
-                prc_basedate = prc_basedate.append(this_prc_basedate,sort=False)
-        if benchmark is False:
-            prc_basedate = prc_basedate.reindex(columns=['coid','zdate'])
-        return prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
+                this_prc_basedate = self.benchmark_roi[(self.benchmark_roi['zdate']>=list_day1)].copy()
+                if int(self.basic_info.loc[self.basic_info['coid']==query_coid,'list_day2'].isnull().values[0])==0:
+                    list_day2 = self.basic_info.loc[self.basic_info['coid']==query_coid,'list_day2'].values[0]       
+                    this_prc_basedate = self.benchmark_roi[(self.benchmark_roi['zdate']<=list_day2)].copy()                
+                #要補上代碼，否則仍是空值
+                this_prc_basedate['coid'] = query_coid
+                if prc_basedate is None:
+                    prc_basedate = this_prc_basedate
+                else:
+                    prc_basedate = prc_basedate.append(this_prc_basedate,sort=False)
+            if benchmark is False:
+                prc_basedate = prc_basedate.reindex(columns=['coid','zdate'])
+            return prc_basedate.sort_values(by=['coid','zdate'], ascending=True).reset_index(drop=True)
 
     def get_val_cname(self,table_name:str):
                 #從代碼對照表中取出所有代碼名稱，
@@ -688,54 +656,62 @@ class query_base(object):
                 for val_name in val_cname for coid_name in coid_map }
     
         return ans
-    def get_available_name(self,column_names:list,category:int = 5):
+              
+    def get_available_name(self,column_names:list):
         available_cname = []
         # 用來查出可以用的欄位
         #1總經
         # 總經要控制coid名稱+欄位來當欄位名稱 比如總經GLOBAL/ANMAR的'外銷訂單總額(年)'指定數值'val'欄位(中文名稱'數值')時
         # 則產生的全名為'外銷訂單總額(年)_數值'，而flag欄位pfr則產生'外銷訂單總額(年)_數值類型'
-        if category == 1 :
-            for table_id in self.all_marco_dataset:
-                #取出對照資料
-                coid_map_table = self.macro_mapping_coids.get(table_id)
-                # 產生欄位名稱後綴列表
-                val_cname_dict = self.get_val_cname(table_id)
-                # 取得名稱與代碼對照表
-                coid_list = coid_map_table.get('coid_list')          
-                # 產生欄位全名對實體欄位名+代碼對照表
-                columns_cname = coid_map_table.get('fullname_map')
+
+        for table_id in self.all_marco_dataset:
+            #取出對照資料
+            coid_map_table = self.macro_mapping_coids.get(table_id)
+            # 產生欄位名稱後綴列表
+            val_cname_dict = self.get_val_cname(table_id)
+            # 取得名稱與代碼對照表
+            coid_list = coid_map_table.get('coid_list')          
+            # 產生欄位全名對實體欄位名+代碼對照表
+            columns_cname = coid_map_table.get('fullname_map')
                 
-                columns_cname = list(columns_cname.keys())
-                #查詢欄位與名稱的交集
-                columns_cname = numpy.intersect1d(column_names,columns_cname).tolist()
-                if len(columns_cname)>0:  
-                    column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
-                    available_cname.append({'id':table_id,'columns_cname':columns_cname})
+            columns_cname = list(columns_cname.keys())
+            #查詢欄位與名稱的交集
+            columns_cname = numpy.intersect1d(column_names,columns_cname).tolist()
+            if len(columns_cname)>0:  
+                column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
+                this_dict = {'id':table_id,'columns_cname':columns_cname,'category':'macro'}
+                available_cname.append(this_dict)
+
+
         #2信用風險分析        
         #3公司營運面資料
         #4公司交易面資料
-        elif category == 2 or category == 3 or category == 4 :
-            for table_id in self.all_prc_dataset:
-                table_cname = self.get_table_cname(table_name=table_id)       
-                if table_cname is None:
-                    continue
+
+        for table_id in self.all_prc_dataset:
+            table_cname = self.get_table_cname(table_name=table_id)       
+            if table_cname is None:
+                continue
                 
-                available_items = self.get_column_name(table_name=table_id)
+            available_items = self.get_column_name(table_name=table_id)
                 
-                columns_cname = available_items.get('columns_cname')
-                columns_cname = numpy.intersect1d(column_names,columns_cname).tolist()
-                if len(columns_cname)>0:  
-                    column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
-                    available_cname.append({'id':table_id,'columns_cname':columns_cname})
-                    print(table_id+' '+table_cname)
+            columns_cname = available_items.get('columns_cname')
+            columns_cname = numpy.intersect1d(column_names,columns_cname).tolist()
+            if len(columns_cname)>0:  
+                column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
+                this_dict = {'id':table_id,'columns_cname':columns_cname,'category':'trade'}
+                available_cname.append(this_dict)
+   
+
         #5公司財務面資料
-        elif category == 5 :
-            columns_cname = self.accountData.loc[
-                self.accountData['cname'].isin(column_names),['code','ename','cname']
-                ].drop_duplicates(subset=['code'],keep='last')
-            columns_cname = columns_cname['cname'].values.tolist()     
+
+        columns_cname = self.accountData.loc[
+            self.accountData['cname'].isin(column_names),['code','ename','cname']
+            ].drop_duplicates(subset=['code'],keep='last')
+        
+        columns_cname = columns_cname['cname'].values.tolist()     
+        if len(columns_cname)>0:
             column_names = numpy.setdiff1d(column_names, columns_cname).tolist()
-            available_cname = [{'id':'fin','columns_cname':columns_cname}]
+            available_cname.append({'id':self.findataTable,'columns_cname':columns_cname,'category':'fin'})
         #6基金資料庫
         
         #7衍生性金融商品資料庫
@@ -743,6 +719,57 @@ class query_base(object):
         #8債券資料庫
         
         #9試用
-    
+
         return available_cname,column_names
 
+    def combine_column_record(self,column_record:list):
+        column_record_dict = {'fin':None,'trade':None,'macro':None}
+
+        for row in column_record:
+            table_id = row.get('id')
+            table_cate = row.get('category')
+
+            # 處理使用者輸入而非查出來的dict
+            if table_cate is None:
+                if table_id in self.all_prc_dataset:
+                    table_cate = 'trade'
+                elif table_id in self.all_marco_dataset:
+                    table_cate = 'macro'
+                elif table_id in [self.findataTable,self.activeFindataTable]:
+                    table_cate = 'fin'
+
+            if column_record_dict.get(table_cate) is None:
+                column_record_dict[table_cate] = {}
+                column_record_dict[table_cate][table_id]=row.get('columns_cname')
+            else:
+                if column_record_dict[table_cate].get(table_id) is None:
+                    column_record_dict[table_cate][table_id] = row.get('columns_cname')
+                else:
+                    column_record_dict[table_cate][table_id] = list(set(column_record_dict[table_cate][table_id] + 
+                                                    row.get('columns_cname')))
+        #column_record = [{'id':table_id,'columns_cname':column_record_dict.get(table_id)}
+        #                for table_id in column_record_dict.keys()]
+        
+
+        return column_record_dict
+        
+    def get_column_record(self,column_names:list):
+        column_record = []
+        column_list = []
+        for column in column_names:
+            
+            if type(column) is str:
+                column_list.append(column)
+            elif type(column) is dict:
+                column_id = column.get('id').split('/')           
+                column_market = column_id[0]
+                column_codes = column_id[1]
+
+                if column_market in self.market or column_market in 'GLOBAL':
+                   
+                    column_record.append(column)
+                else:
+                    print(column.get('id')+': inconsistent db code')
+        column_list = list(set(column_list)) 
+        return column_list,column_record
+        
