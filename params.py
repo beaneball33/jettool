@@ -102,8 +102,8 @@ transfer_acccode_list = [{'acc_code':'0400','cname':'不動產及設備淨額','
 active_list = []
 not_active_list = []
 
-macro_mapping_coids = [
-   {'id':'GLOBAL/GIDX',
+macro_mapping_coids = {
+   'GLOBAL/GIDX':{
     'cname':'cname',
     'val':'val',   
     'coid_table':None,
@@ -268,7 +268,7 @@ macro_mapping_coids = [
              '歐菲中東指數EUR': 'SB9911',
              '歐菲中東指數LOCAL': 'SB9912'}
    },
-   {'id':'GLOBAL/GCURR',
+   'GLOBAL/GCURR':{
     'cname':'cname',
     'val':'close_ny',   
     'coid_table':None,
@@ -328,16 +328,16 @@ macro_mapping_coids = [
              '阿根廷比索': 'ARS'
             }
     },
-   {'id':'GLOBAL/ANMAR',
+   'GLOBAL/ANMAR':{
     'cname':'cname',
     'val':'val',
     'coid_table':'GLOBAL/ABMAR',
     'coid_list':None
     },
-   {'id':'GLOBAL/WKCMD',
+   'GLOBAL/WKCMD':{
     'cname':'cnmspec',
     'val':'val',
     'coid_table':'GLOBAL/WBCMD',
     'coid_list':None
     }
-]
+}

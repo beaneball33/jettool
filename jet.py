@@ -177,18 +177,22 @@ class engine(querybase.query_base,
         self.set_params(self.finreport.params.__dict__)
         return cname_outcome
     def query_dailydata(self,*,prc_name={}):
+        #產生標準交易日期資料
+
+        self.append_list = []
+        self.part_query_interval = self.get_query_interval()
+        self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
         if len(prc_name)>0:
-            self.query_tradedata(prc_name=prc_name)
+            self.query_tradedata(query_list=prc_name)
         
     def query_macrodata(self,*,prc_name={}):
         print('macro')
     def query_basicdata(self,*,base_startdate='2015-12-31'):
         # 基本屬性資料，需要改為抽像化查詢
         
-        table_maping = dbapi.get_table_mapping(market='TWN',
-                                               category_list=self.category_list,
-                                               id='AIND').get('tableMap')
+        table_maping = dbapi.get_table_mapping(category_list=self.category_list,
+                                               table_name='TWN/AIND').get('tableMap')
         base_table = None
         for table in table_maping:
             if self.market == table.get('dbCode'):
