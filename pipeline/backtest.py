@@ -188,10 +188,12 @@ class backtest_base(method.method_base):
                 self.all_date_data = self.all_date_data.fillna(method='ffill')
                 self.all_date_data[fill_col] = self.all_date_data[fill_col].replace([numpy.inf, -numpy.inf], numpy.nan)
                 self.all_date_data[fill_col] = self.all_date_data[fill_col].fillna(method='bfill')
+                #合併單key資料
+                self.all_date_data = self.all_date_data.merge(self.macro_basedate.fillna(method='ffill'),on=['zdate'],how='left')
                 #濾掉不該有的日期的資料
                 self.all_date_data = self.all_date_data.loc[self.all_date_data['zdate'].isin(self.all_zdate_list),:]
                 self.all_date_data = self.all_date_data.drop_duplicates(subset=['coid','zdate'])
-
+                
         self.set_listed_coid(self.all_date_data)
         self.change_report = False
         self.data = self.all_date_data
@@ -351,8 +353,7 @@ class backtest_base(method.method_base):
             df = df[df['zdate']==self.current_zdate]
         return df[['zdate','coid','unit','value','roibnext']]
     def combine_query(self,import_data=None):
-        self.all_date_data = self.prc_basedate.copy()
-        
+        self.all_date_data = self.prc_basedate.copy()        
         if import_data is not None:
             self.all_date_data = self.all_date_data.merge(import_data,on=['coid','zdate'],how='left')
             

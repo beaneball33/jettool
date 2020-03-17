@@ -142,7 +142,6 @@ class query_base(object):
                             # 產生欄位全名對實體欄位名+代碼對照表
                             coid_map_table['fullname_map'] = self.create_mapping_cname(val_cname_dict,coid_list)
                             tempmarco.append(table_name)
-                            
                                                         
         self.all_marco_dataset = tempmarco
                 

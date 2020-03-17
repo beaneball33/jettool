@@ -60,7 +60,7 @@ indicators = []
 hold_coids = []
 hold_unit = []
 prc_basedate = pandas.DataFrame(columns=['zdate','coid'])
-macro_basedate = pandas.DataFrame(columns=['zdate','coid'])
+macro_basedate = pandas.DataFrame(columns=['zdate'])
 basic_info = pandas.DataFrame(columns=['zdate','coid'])
 fin_cover = pandas.DataFrame(columns=['zdate','coid'])
 findata_all = pandas.DataFrame(columns=['zdate','coid'])

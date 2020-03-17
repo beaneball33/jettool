@@ -24,7 +24,7 @@ def get_info():
     print(print_info)
     return info  
 # 取得按照索引目錄分層的完整資料表清單
-def set_tablelist(tables):
+def set_tablelist(tables:list):
         
     api_tables = {}
     for table_name in tables:
@@ -94,7 +94,7 @@ def get_tables():
     return table_list
 
 # 根據索引目錄的資料表清單構造，回傳dataframe方便檢視
-def get_tables_info(*,market='TWN',table_list={}):            
+def get_tables_info(*,market:str = 'TWN',table_list:list = {}):            
     df = None
     
     # 把所有國別資料表都回傳
@@ -120,7 +120,8 @@ def get_tables_info(*,market='TWN',table_list={}):
 
 
 # 根據已知的table名稱，查詢mapping到別的國家的資料表清單
-def get_table_mapping(table_name='TWN/AIND',*,category_list=None):
+def get_table_mapping(table_name:str = 'TWN/AIND',*,
+                      category_list:list = None):
     market = table_name.split('/')[0]
 
     if category_list is None:
@@ -133,7 +134,8 @@ def get_table_mapping(table_name='TWN/AIND',*,category_list=None):
                     table_name in table.get('tableId')):
                     return tableMap
 # 使用tejapi.search_table進行交集或聯集查詢
-def search_column(*,market='TWN',keyword='報酬率',condition='and',current_market=True):
+def search_column(*,market:str = 'TWN',keyword:str = '報酬率',
+                    condition:str = 'and',current_market=True):
 
     tejapi.ApiConfig.api_key = api_key
     k_name_list = keyword.split(' ')
@@ -172,7 +174,7 @@ def search_column(*,market='TWN',keyword='報酬率',condition='and',current_mar
     return match_df
     
 # 取得指定表單的完整欄位表
-def get_table_columns(*,table_name='TWN/AAPRCDA'):
+def get_table_columns(*,table_name:str = 'TWN/AAPRCDA'):
 
     tejapi.ApiConfig.api_key = api_key
     columns_name = []

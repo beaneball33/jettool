@@ -20,28 +20,29 @@ def set_params(new_params):
             if params.__dict__.get(param) is not None:
                 params.__dict__[param] = new_params.get(param)
            
-def inital_report(*,my_key=None,code_table='TWN/AIACC',actvie_code_table='TWN/AINVFACC_INFO_C'):
-    if my_key is None:
-        my_key = api_key
+def inital_report(*,code_table:str = 'TWN/AIACC',
+                    actvie_code_table:str = 'TWN/AINVFACC_INFO_C'):
+
     if params.accountData is 'na':
-        tejapi.ApiConfig.api_key = my_key
+        tejapi.ApiConfig.api_key = api_key
         params.accountData = tejapi.get(code_table)
         params.activeAccountData = tejapi.get(actvie_code_table)
         params.accountData['cname'] = params.accountData['cname'].str.replace('(','（').replace(')','）')
         params.accountData = params.accountData.sort_values(by=['cname'])
         params.accountData = params.accountData.drop_duplicates(subset=['code'],keep='last')
 
-def get_by_word(keyword='損益',*,my_key=None,active_view=False):
+def get_by_word(keyword:str = '損益',*,
+                active_view:bool = False):
 
-    inital_report(my_key=my_key)
+    inital_report()
     if active_view is False:
         ans = params.accountData.loc[params.accountData['cname'].str.contains(keyword),'cname'].reset_index(drop=True)
     else:
         ans = params.activeAccountData.loc[params.activeAccountData['cdesc'].str.contains(keyword),'cdesc'].reset_index(drop=True)
     return ans
-def get_by_cgrp(cgrp=['損益表'],*,my_key=None,active_view=False):
+def get_by_cgrp(cgrp:list = ['損益表'],*,active_view:bool = False):
 
-    inital_report(my_key=my_key)
+    inital_report()
     if active_view is False:
         ans = params.accountData.loc[params.accountData['cgrp'].isin(cgrp),'cname'].reset_index(drop=True)
     else:
@@ -50,12 +51,11 @@ def get_by_cgrp(cgrp=['損益表'],*,my_key=None,active_view=False):
         ans = params.activeAccountData.loc[params.activeAccountData['acct_type'].isin(cgrp_code),'cdesc'].reset_index(drop=True)
     return ans
     
-def get_acc_code(acc_name=[],*,my_key=None,active_view=False):
-    if my_key is None:
-        my_key = api_key
-    tejapi.ApiConfig.api_key = my_key
+def get_acc_code(acc_name:list = [],*,active_view:bool = False):
 
-    inital_report(my_key=my_key)
+    tejapi.ApiConfig.api_key = api_key
+
+    inital_report()
     ans = []
     acc_name_set = set(acc_name)
     acc_name = list(acc_name_set)
@@ -76,10 +76,9 @@ def get_acc_code(acc_name=[],*,my_key=None,active_view=False):
                 else:
                     print(cname+':not find')
         return ans
-def get_announce(*,my_key=None,table_id=None,query_coid=[],sample_dates=[]):
-    if my_key is None:
-        my_key = api_key
-    tejapi.ApiConfig.api_key = my_key
+def get_announce(*,table_id:str = None,query_coid:list = [],sample_dates:list = []):
+
+    tejapi.ApiConfig.api_key = api_key
     if table_id is None:
         table_id = params.announceTable
     if len(query_coid) == 0:
@@ -89,21 +88,25 @@ def get_announce(*,my_key=None,table_id=None,query_coid=[],sample_dates=[]):
     datastart_date = sample_dates[0]
     current_zdate = sample_dates[1]
     fin_cover = tejapi.get(table_id,
-                           coid=query_coid,a0003={'gte':datastart_date,'lte':current_zdate},
-                           opts={"sort":"mdate.desc",'columns':['coid','mdate','a0003']},paginate=True).rename(
+                           coid=query_coid,
+                           a0003={'gte':datastart_date,'lte':current_zdate},
+                           opts={'sort':'mdate.desc',
+                                 'columns':['coid','mdate','a0003']
+                                 },paginate=True).rename(
                            index=str, columns={"a0003": "zdate"})
     return   fin_cover
-def get_report(*,my_key=None,query_code=[],query_coid=[],sample_dates=[],rename_cols=True):
+def get_report(*,query_code:list = [],query_coid:list = [],
+                 sample_dates:list = [],rename_cols:bool= True):
     params.acc_code = query_code
-    if my_key is None:
-        my_key = api_key
-    tejapi.ApiConfig.api_key = my_key
 
+    tejapi.ApiConfig.api_key = api_key
 
     if len(query_coid) == 0:
         query_coid = params.input_coids
     all_fin_data = None
-    if len(query_coid)==0 or len(query_code)==0 or len(sample_dates)!=2:
+    if (len(query_coid)==0 or 
+        len(query_code)==0 or
+        len(sample_dates)!=2):
         return None
     #嘗試查詢報表封面
 
@@ -139,11 +142,11 @@ def get_report(*,my_key=None,query_code=[],query_coid=[],sample_dates=[],rename_
     print('成功查詢會計家數:'+str(len(fin_data['coid'].unique())))
     return  fin_data        
 
-def get_active_report(*,my_key=None,query_code=[],query_coid=[],sample_dates=[]):
+def get_active_report(*,query_code:list = [],query_coid:list = [],
+                        sample_dates:list = []):
     params.acc_code = query_code
-    if my_key is None:
-        my_key = api_key
-    tejapi.ApiConfig.api_key = my_key
+
+    tejapi.ApiConfig.api_key = api_key
     if len(query_coid) == 0:
         query_coid = params.input_coids.copy()
     query_column = ['coid','mdate','fin_od']+params.acc_code
@@ -207,12 +210,11 @@ def get_active_report(*,my_key=None,query_code=[],query_coid=[],sample_dates=[])
     print('成功查詢會計家數:'+str(len(findata_all['coid'].unique())))
     return findata_all
         
-def do_query(*,my_key=None,query_code=[],query_coid=[],sample_dates=[],query_length = 365,active_view=False):
+def do_query(*,query_code:list = [],query_coid:list = [],sample_dates:list = [],
+               query_length:int = 365,active_view:bool = False):
     acc_code_set = set(query_code)
     query_code = list(acc_code_set)
     params.acc_code = query_code
-    if my_key is None:
-        my_key = api_key
         
     params.query_length = query_length
     if len(query_coid) == 0:
@@ -226,19 +228,16 @@ def do_query(*,my_key=None,query_code=[],query_coid=[],sample_dates=[],query_len
             #查詢季報
     if active_view is False:
         params.active_view = False
-        findata_all = get_report(my_key=my_key,
-                                 query_code=params.acc_code,
+        findata_all = get_report(query_code=params.acc_code,
                                  query_coid=query_coid,
                                  sample_dates=sample_dates)                
     else:
         params.active_view = True
-        findata_all = get_active_report(my_key=my_key,
-                                        query_code=params.acc_code,
+        findata_all = get_active_report(query_code=params.acc_code,
                                         query_coid=query_coid,
                                         sample_dates=sample_dates)
-            
-    all_mdate_list = findata_all['mdate'].astype(str).unique().astype('datetime64')
-
+    findata_all['mdate'] = findata_all['mdate'].astype(str)
+    all_mdate_list = findata_all['mdate'].unique().astype('datetime64')
     params.all_mdate_list = numpy.sort(all_mdate_list)
     params.current_mdate = all_mdate_list[len(all_mdate_list)-1] 
 
