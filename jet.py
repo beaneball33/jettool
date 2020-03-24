@@ -1,4 +1,4 @@
-﻿"""
+"""
 TODO LIST:
 
 1.query_basicdata需要改為抽象化查詢，改成到各個屬性table找裡面有標記"基本資料"的，但其實目前只有一個TWN的表
@@ -7,14 +7,16 @@ TODO LIST:
 """
 from . import params
 from . import dataset
+from .dataset import querybase
 from .dataset import finreport
+from .dataset import dbapi
 from .pipeline import backtest
 import os
 import numpy
 import inspect
 import json
 import pandas
-class financial_tool(finreport.financial_report,
+class engine(querybase.query_base,
                      backtest.backtest_base):
     """
     此為最外層的tool，規範所有讓使用者直接使用的查詢工具
@@ -24,16 +26,21 @@ class financial_tool(finreport.financial_report,
     3.日資料的交易日會以該市場的大盤指數為準，校正交易日、補零
     4.find開頭代表查找某種東西，query開頭代表須要進行api取資料，get代表不進行query在已經取好的資料集中進行資料整合取得
     """
-    def __init__(self,api_key=None):
-        for name in params.__dict__:
-            if '__' not in name and not callable(params.__dict__.get(name)):   
-                self.__dict__[name] = params.__dict__.get(name)
-        if api_key is not None:
-            self.set_apikey(api_key)
+    def __init__(self,api_key):
+        
+        self.set_params(params.__dict__,allow_null=True)
+        self.set_apikey(api_key)
         #self.load_data()
         
-    def query_data(self,window='1m',column_names='收盤價(元)',*,base_date=None,mkts=['TSE','OTC']):
-        
+        self.dbapi=dbapi
+        self.dbapi.api_key = api_key
+        self.finreport = finreport
+        self.finreport.api_key = api_key
+
+    def query_data(self,window='1m',column_names=['收盤價(元)'],*,
+                        market=None,base_date=None):
+        if market is not None:
+            self.set_market(market)
         #自動化處理觀測日期base_date=current_zdate
         if base_date is None:
             base_date = self.dataend_date
@@ -46,44 +53,65 @@ class financial_tool(finreport.financial_report,
                                                 base_date=self.dataend_date,
                                                 tradeday=False)
         print('資料起始日：'+str(self.datastart_date))
-        self.check_initial_data(mkts=mkts)        
+        self.check_initial_data()        
+
+        #處理查詢欄位名稱，分開為有指定table id與沒有指定的
+        column_names_list,column_names_record = self.get_column_record(column_names)
+
+        #取出確實存在的欄位名稱，分table名存放
+        available_record,column_names_list = self.get_available_name(column_names_list)
+        if len(column_names_record)>0:
+            available_record = available_record + column_names_record
+
+        #將record檢查重覆，並
+        column_dict = self.combine_column_record(column_record=available_record)
+
         
-        #處理查詢欄位名稱
-        column_names_list = list(set(column_names)) 
-        #開始檢查各個查詢名稱所屬的資料表
 
         #取出確實存在於會計科目的名稱
-        available_fin_name,column_names = self.get_available_name(column_names_list,category=5)
-        if len(available_fin_name)>0:
-            self.query_report_data(mkts=mkts,available_cname=available_fin_name)
-        #取出差異名稱
+        fin_dict = column_dict.get('fin')
 
+        if fin_dict is not None:
+            fin_record = [{'id':table_id,'columns_cname':fin_dict.get(table_id)}
+                                for table_id in fin_dict.keys()][0]
 
-        
+            self.query_report_data(available_cname=fin_record)
+
         #逐一檢查可查詢日資料清單
-        available_prc_name,column_names = self.get_available_name(column_names,category=4)
-        self.available_prc_name = available_prc_name
-        self.query_dailydata(prc_name=available_prc_name)
+        macro_dict = column_dict.get('macro')
+        if macro_dict is not None:
+            macro_record = [{'id':table_id,'columns_cname':macro_dict.get(table_id)}
+                                for table_id in macro_dict.keys()]        
+            self.query_timeseries(prc_name=macro_record)   
+        
+        trade_dict = column_dict.get('trade')
+        if trade_dict is not None:
+            trade_record = [{'id':table_id,'columns_cname':trade_dict.get(table_id)}
+                                for table_id in trade_dict.keys()]        
+            self.query_tradedata(prc_name=trade_record)
         
         #查詢完畢，更新設定值
         self.set_data_attr()
         
-        if (self.prc_basedate is not None and 
-            self.findata_all is not None):
-            
-            self.set_back_test(back_interval=[1,-1])
-            self.manage_report()
-        df = self.get_activedate_data(window=window,
-                                      column_names=column_names_list,
-                                      base_date=base_date)[0]
+        df = self.get_data(window=window,
+                           column_names=column_names,
+                           base_date=base_date)
         return df
-    def get_data(self,column_names='收盤價(元)',*,window='1d',base_date=None):
+    def get_data(self,column_names=['收盤價(元)'],*,window='1d',base_date=None):
         #處理查詢欄位名稱
-        column_names_list = list(set(column_names))     
+        column_names_list = []
+        for column in column_names:
+            if type(column) is str:
+                column_names_list.append(column)
+            elif type(column) is dict:
+                column_names = column.get('columns_cname')
+                column_names_list = column_names_list+column_names
+        
+        column_names_list = list(set(column_names_list))     
         if base_date is None:
             base_date = self.dataend_date        
         zdate_interval = self.get_zdate(base_date)
-        print(zdate_interval)
+
         if (self.prc_basedate is not None and 
             self.findata_all is not None):
             
@@ -93,71 +121,89 @@ class financial_tool(finreport.financial_report,
                                       column_names=column_names_list,
                                       base_date=base_date)[0]
         return df
-    def check_initial_data(self,*,mkts=['TSE','OTC']):
+    def check_initial_data(self):
         #用來初始化查詢用的基本資料
-        #取得會計科目表
-        if self.accountData is None:
-            self.inital_report()          
+       
         #取得上市公司清單
-        if self.input_coids is None:
-            self.query_basicdata(mkts=mkts,base_startdate=self.datastart_date)    
+
+        self.query_basicdata(base_startdate=self.datastart_date)    
         #取得標準交易日期資料
         self.query_benchmark(base_startdate=self.datastart_date,
                            base_date=self.dataend_date)
+        self.finreport.set_params(self.__dict__)
+        self.finreport.inital_report()
 
-
-    def query_report_data(self,available_cname='收盤價(元)',*,mkts=['TSE','OTC'],active_view=False):
+        self.set_params(self.finreport.params.__dict__)
+    def query_report_data(self,available_cname,*,
+                          active_view=False):
         # 可以抽象化查詢財報資料，自動整何公告日與財報季別
         
         print('查詢財報資料')
         
-        acc_name = available_cname[0].get('columns_cname')
-        self.check_initial_data()
+        acc_name = available_cname.get('columns_cname')
+        self.finreport.set_params(self.__dict__)
+        self.finreport.inital_report()   
         if len(acc_name) ==0:
             acc_name = ['常續性稅後淨利']
-        query_code = self.get_acc_code(acc_name=acc_name,
+        query_code = self.finreport.get_acc_code(acc_name=acc_name,
                                        active_view=active_view)
         
-        self.do_query(query_code=query_code,
-                      query_length = self.query_length,
-                      active_view=active_view)
-        
+        findata_all = self.finreport.do_query(query_code=query_code,
+            query_length = self.query_length,
+            sample_dates=[self.datastart_date,self.dataend_date],
+            active_view=active_view)
+
+        self.set_params(self.finreport.params.__dict__)
+
+        self.findata_all = findata_all
         print('最大財報資料日期:'+str(self.current_mdate))
-    def find_account_name(self,cname='收盤價(元)',active_view=False):
+    def find_account_name(self,cname='常續性',active_view=False):
         #自動整合查詢財報科目，可以查名稱，若沒有則查分類
     
-        if self.accountData is None:
-            self.inital_report()    
-        if type(cname).__name__ == 'str':
+        self.finreport.set_params(self.__dict__)
+
+        self.finreport.inital_report()   
+        if isinstance(cname,str) is True:            
             cname_list = [cname]
         else:
             cname_list = cname
-        cname_outcome = self.get_by_cgrp(active_view=active_view,
+        cname_outcome = self.finreport.get_by_cgrp(active_view=active_view,
                                          cgrp=cname_list)
         if len(cname_outcome)<1:
             for cname in cname_list:
-                cname_outcome_temp = self.get_by_word(active_view=active_view,
+                cname_outcome_temp = self.finreport.get_by_word(active_view=active_view,
                                                       keyword=cname)
                 if len(cname_outcome)<1 :
                     cname_outcome = cname_outcome_temp 
                 else:
                     cname_outcome = numpy.append(cname_outcome,
                                                  cname_outcome_temp)
+        self.set_params(self.finreport.params.__dict__)
         return cname_outcome
-    def query_dailydata(self,*,mkts=['TSE','OTC'],prc_name={}):
+    def query_tradedata(self,*,prc_name={}):
+        #產生標準交易日期資料
+
+        self.append_list = []
+        self.part_query_interval = self.get_query_interval()
+        self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
         if len(prc_name)>0:
+            self.query_dailydata(query_list=prc_name)
+    def query_timeseries(self,*,prc_name={}):
+        #產生標準交易日期資料
 
-            self.query_tradedata(prc_name=prc_name)
+        self.append_list = []
+        self.part_query_interval = self.get_query_interval()
+        self.full_query_interval = [{'mdate_up':self.dataend_date,'mdate_down':self.datastart_date}]
         
-    def query_macrodata(self,*,prc_name={}):
-        print('macro')
-    def query_basicdata(self,*,mkts=['TSE'],base_startdate='2015-12-31'):
+        if len(prc_name)>0:
+            self.query_macrometa(query_list=prc_name)        
+
+    def query_basicdata(self,*,base_startdate='2015-12-31'):
         # 基本屬性資料，需要改為抽像化查詢
         
-
-        
-        table_maping = self.get_table_mapping(market='TWN',id='AIND').get('tableMap')
+        table_maping = dbapi.get_table_mapping(category_list=self.category_list,
+                                               table_name='TWN/AIND').get('tableMap')
         base_table = None
         for table in table_maping:
             if self.market == table.get('dbCode'):
@@ -194,11 +240,9 @@ class financial_tool(finreport.financial_report,
         self.listdata = self.tejapi.get('TWN/ANPRCSTD',
             coid=self.basic_info['coid'].values.tolist(),
             stype='STOCK',opts={'columns':['coid']},paginate=True)
-        if self.input_coids is None:
-            self.input_coids = self.listdata['coid'].values.tolist()
-        else:
-            self.input_coids = self.listdata.loc[self.listdata['coid'].isin(self.input_coids),'coid'].values.tolist()
-			
+
+        self.input_coids = self.listdata['coid'].values.tolist()
+
 
     def query_benchmark(self,*,benchmark_id=None,base_startdate='2015-12-31',base_date='2019-12-31'):
         # 績效指標的函式 需要改為抽象化查詢

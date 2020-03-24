@@ -1,11 +1,18 @@
 import pandas
 import numpy
 import scipy
+from .. import params
 from datetime import datetime, date, timedelta
 import statsmodels.api as sm
 import time 
 import traceback
 class method_base(object):
+
+    def __init__(self,api_key=None):
+        for name in params.__dict__:
+            if '__' not in name and not callable(params.__dict__.get(name)):   
+                self.__dict__[name] = params.__dict__.get(name)
+
 
     def calculate_maxdrawback(self,window=None,col_type=True,df=None):
         if df is None:

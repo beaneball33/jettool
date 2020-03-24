@@ -1,4 +1,4 @@
-﻿import numpy
+import numpy
 import pandas
 from . import method
 import time 
@@ -64,7 +64,7 @@ class backtest_base(method.method_base):
         start_index = 0
         end_index = -1
         if back_interval is not None:
-            if type(back_interval).__name__ == 'int':
+            if isinstance(back_interval,int) is True:
                 #整數型，由最後一天往前推
                 back_interval = max(0 , min(back_interval,len(self.all_zdate_list)-2))
                 temp_back_date = self.all_zdate_list[0] -  numpy.timedelta64(back_interval,'D')
@@ -72,12 +72,14 @@ class backtest_base(method.method_base):
                 print(back_interval)
             #若back_interval有傳入，按照型別處理
 
-            if type(back_interval).__name__ == 'list':
+
+            if isinstance(back_interval,list) is True:
                 #區間型，自動找出對應日期
-                if type(back_interval[0]).__name__ == 'int':
+                
+                if isinstance(back_interval[0],int) is True:
                     start_index = max(0 , back_interval[0])
                     end_index   = max(-1 , back_interval[1])
-                elif type(back_interval[0]).__name__ == 'str':
+                elif isinstance(back_interval[0],str) is True:
                     calstart_date = numpy.datetime64(back_interval[0])
                     for t in range(0,len(self.all_zdate_list)):
                         if self.all_zdate_list[t]<=calstart_date:
@@ -89,7 +91,8 @@ class backtest_base(method.method_base):
                             end_index = t
                             break
 
-            elif type(back_interval).__name__ == 'str':
+
+            if isinstance(back_interval,str) is True:
                 #字串型，轉換為日期使用，找出對應日期
                 calstart_date = numpy.datetime64(back_interval)
                 for t in range(0,len(self.all_zdate_list)):
@@ -185,10 +188,12 @@ class backtest_base(method.method_base):
                 self.all_date_data = self.all_date_data.fillna(method='ffill')
                 self.all_date_data[fill_col] = self.all_date_data[fill_col].replace([numpy.inf, -numpy.inf], numpy.nan)
                 self.all_date_data[fill_col] = self.all_date_data[fill_col].fillna(method='bfill')
+                #合併單key資料
+                self.all_date_data = self.all_date_data.merge(self.macro_basedate.fillna(method='ffill'),on=['zdate'],how='left')
                 #濾掉不該有的日期的資料
                 self.all_date_data = self.all_date_data.loc[self.all_date_data['zdate'].isin(self.all_zdate_list),:]
                 self.all_date_data = self.all_date_data.drop_duplicates(subset=['coid','zdate'])
-
+                
         self.set_listed_coid(self.all_date_data)
         self.change_report = False
         self.data = self.all_date_data
@@ -348,8 +353,7 @@ class backtest_base(method.method_base):
             df = df[df['zdate']==self.current_zdate]
         return df[['zdate','coid','unit','value','roibnext']]
     def combine_query(self,import_data=None):
-        self.all_date_data = self.prc_basedate.copy()
-        
+        self.all_date_data = self.prc_basedate.copy()        
         if import_data is not None:
             self.all_date_data = self.all_date_data.merge(import_data,on=['coid','zdate'],how='left')
             
