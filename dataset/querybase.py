@@ -35,7 +35,7 @@ class query_base(object):
         self.category_list = dbapi.get_category()
         self.table_list = dbapi.get_tables()
         # 標準化日資料(有zdate，不需轉置)的查詢工具)，以便給定欄位名稱就可以查詢
-        self.set_query_ordinal()        
+        self.set_query_ordinary()        
         
      
         
@@ -63,103 +63,148 @@ class query_base(object):
             job_list.append({'mdate_up':datastart_date,
                              'mdate_down':self.datastart_date})
         return job_list
-        
-    def set_query_ordinal(self):
+    def set_query_ordinary(self):
         #按照category_list中的順序，將可查詢的表拼湊
-        tempordinal = []
-
-        # 加入交易屬性類，以頻率決定
-
-        for subcategory in self.category_list.get(4).get('subs'):
-            if len(subcategory.get('tableMap'))>0:
+        category_id_list = [4,3,2,1]
+        for category_id in category_id_list:
+            for subcategory in self.category_list.get(category_id).get('subs'):
                 for table_attr in subcategory.get('tableMap'):
                     table_name = table_attr.get('tableId')
                     table_id = table_attr.get('tableId').split('/')[1]
-                    if table_attr.get('dbCode') == self.market:
-                        if table_id in self.api_tables.get(table_attr.get('dbCode')):
-                            table_data = self.table_list.get(table_attr.get('dbCode'))
-                            data_freq = table_data.get(table_id).get('frequency')
-                            if data_freq  in self.all_prc_dataset_freq:
+                    if (table_id in self.api_tables.get(table_attr.get('dbCode')) and
+                        (category_id == 1 or table_attr.get('dbCode') == self.market)
+                        ):
+                         # 必須是在可查詢清單中才開始查資料表資訊，否則浪費頻寬
+                        dataset_name = self.get_dataset_name(table_name)
+                        table_info = self.table_info[dataset_name]
+                        if category_id == 1:
+                            # 總經類單獨處理
+                            self.manage_marco_dataset(dataset_name)
+                        elif table_info['frequency'] in self.all_prc_dataset_freq:
+                            self.all_prc_dataset.append(table_name)
 
-                                tempordinal.append(table_name)
- 
-
-        # 加入基本屬性類，需要知道mdate真實名稱才會被列入，故需要修改描述表
-        for subcategory in self.category_list.get(3).get('subs'):
-            if len(subcategory.get('tableMap'))>0:
-                for table_attr in subcategory.get('tableMap'):
-                    table_name = table_attr.get('tableId')
-                    table_id = table_attr.get('tableId').split('/')[1]
-                    if table_attr.get('dbCode') == self.market:
-                        if table_id in self.api_tables.get(table_attr.get('dbCode')):
-                            if table_id in self.mdate_name_dict.keys():
-                                mdate_dict = self.mdate_name_dict.get(table_id)
-                                frequency = mdate_dict.get('frequency')
-                                if frequency  in self.all_prc_dataset_freq:
-
-                                    tempordinal.append(table_name)
-    
-        # 加入信用風險分析
-        for subcategory in self.category_list.get(2).get('subs'):
-            if len(subcategory.get('tableMap'))>0:
-                for table_attr in subcategory.get('tableMap'):
-                    table_name = table_attr.get('tableId')
-                    table_id = table_attr.get('tableId').split('/')[1]
-                    if table_attr.get('dbCode') == self.market:
-                        if table_id in self.api_tables.get(table_attr.get('dbCode')):
-                            table_data = self.table_list.get(table_attr.get('dbCode'))
-                            data_freq = table_data.get(table_id).get('frequency')
-                            if data_freq  in self.all_prc_dataset_freq:
-
-                                tempordinal.append(table_name)
-        self.all_prc_dataset = tempordinal
-        tempmarco = []
-        
-        #管理總經類GLOBAL
-        for subcategory in self.category_list.get(1).get('subs'):
-            # 逐一檢視設定表內各個TABLE
-            if len(subcategory.get('tableMap'))>0:
-                for table_attr in subcategory.get('tableMap'):
-                    table_name = table_attr.get('tableId')
-                    table_id = table_name.split('/')[1]
-                    #檢查必須有代碼對照表
-                    if table_id in self.api_tables.get(table_attr.get('dbCode')):
-                        coid_map_table = self.macro_mapping_coids.get(table_name)
-                        if coid_map_table is not None: 
-                            #總經必須查詢代碼表
-                            if coid_map_table.get('coid_list') is None:
-                                coid_table = coid_map_table.get('coid_table')
-                                coid_cname_column = coid_map_table.get('cname')
-                                code_data = tejapi.get(coid_table,
-                                                      opts={'columns':['coid',coid_cname_column]},
-                                                      paginate=True).values.tolist()
-                                coid_list = {rows[1]:rows[0] for rows in code_data}
-                                coid_map_table['coid_list'] = coid_list
-                            # 產生欄位名稱後綴列表
-                            val_cname_dict = self.get_val_cname(table_name)
-                            # 取得名稱與代碼對照表
-                            coid_list = coid_map_table.get('coid_list')          
-                            # 產生欄位全名對實體欄位名+代碼對照表
-                            coid_map_table['fullname_map'] = self.create_mapping_cname(val_cname_dict,coid_list)
-                            tempmarco.append(table_name)
                                                         
-        self.all_marco_dataset = tempmarco
-                
+    def manage_marco_dataset(self,table_name):
+        table_info = self.table_info.get(table_name)
+        coid_table = table_info.get('coid_map')
+        coid_cname_column = 'cname'
+        coid_map_table = self.macro_mapping_coids.get(table_name)
+           
+        if coid_table is not None or coid_map_table is not None:
+            #總經必須查詢代碼表，或是模組內建代碼表
+
+            if coid_map_table is None:
+
+                code_data = self.tejapi.get(coid_table,
+                                            opts={'columns':['coid',coid_cname_column]},
+                                            paginate=True).values.tolist()
+                coid_list = {rows[1]:rows[0] for rows in code_data}
+                coid_map_table = {
+                                    'cname':coid_cname_column,
+                                    'coid_table':coid_table,
+                                    'coid_list':coid_list
+                                 }
+                self.macro_mapping_coids[table_name] = coid_map_table
+            if coid_map_table.get('coid_list') is not None:
+                # 產生欄位名稱後綴列表 若無法產生 則不是macro
+                val_cname_dict = self.get_val_cname(table_name)
+                # 取得名稱與代碼對照表
+                coid_list = coid_map_table.get('coid_list')          
+                # 產生欄位全名對實體欄位名+代碼對照表
+                coid_map_table['fullname_map'] = self.create_mapping_cname(val_cname_dict,coid_list)
+                self.all_marco_dataset.append(table_name)
+
     def get_dataset_name(self,table_name:str) -> str:
         # 產生資料表全名
 
         dataset_name = table_name
         
         if self.table_info.get(dataset_name) is None:
-            try:
-                self.table_info[dataset_name] = self.tejapi.table_info(dataset_name)
+            dataset_table = self.tejapi.table_info(dataset_name)
+            self.table_info[dataset_name] = self.manage_descrption(dataset_table)
+            """
             except (RuntimeError, TypeError, NameError):
                 # 代表不是有資料而是對照表，略過
                 self.table_info[dataset_name] = None        
                 print(dataset_name+':table info error')
-                
+            """    
         return dataset_name
-        
+    def check_table_kind(self,this_table:dict,category:int=1):
+        # 開始判斷例外型別 特別是indicator
+        if  (this_table['key_num'] == 1 and
+             this_table.get('mdate') is not None and           
+             this_table.get('coid_map') is None):
+            # 只有日期key 又沒有對照表 靠略過coid查詢 使用query_dailydata()
+            this_table['kind'] = '時序列'
+        elif ((this_table['key_num'] == 2) and 
+            (this_table.get('coid') is not None and 
+            (this_table.get('mdate') is not None) and           
+            (this_table.get('coid_map') is not None)):
+            # 可合併 只有日期key  coid有對照表 使用query_macrodata()
+            this_table['kind'] = '指標'
+        elif ((this_table['key_num'] == 2) and 
+            (this_table.get('coid') is not None and 
+            (this_table.get('mdate') is not None) and             
+            (this_table.get('coid_map') is None)):
+            # 同時有兩key且無對照表 交易檔 使用query_dailydata()
+            this_table['kind'] = '交易'            
+        elif (this_table.get('coid') is not None and 
+            this_table.get('mdate') is None):
+            # 缺少【發佈日期欄位】 靜態屬性 暫時使用query_dailydata()
+            this_table['kind'] = '屬性'                  
+        elif ((this_table['key_num'] == 3) and 
+            (this_table.get('coid') is not None) and 
+            (this_table.get('mdate') is not None)):
+            # 此分類無法只靠欄位名稱整合查詢，必須指定表單名稱加欄位實體名稱做整個查詢(尚未完成)
+            # 使用query_dailydata()
+            this_table['kind'] = '事件'            
+        else:
+            # 無法使用得型別
+            this_table['kind'] = '非整合'  
+    def manage_descrption(self,this_table:dict):
+        #判斷key的數量
+        this_table['key_num'] = len(this_table['primaryKey'])
+        this_table['columns'] = list(this_table['columns'].keys())
+        table_des = this_table.get('description').split('<br />')
+        this_table['frequency'] = 'U'
+        this_table['coid_map'] = None
+        this_table['coid'] = None
+        this_table['mdate'] = None
+        this_table['kind'] = None
+        for des_col in table_des:            
+            if '【資料頻率】' in des_col:
+                data_freq = 'N'
+                if '日' in des_col:
+                    data_freq = 'D'
+                if '週' in des_col:
+                    data_freq = 'W'
+                if '月' in des_col:
+                    data_freq = 'M'
+                if '季' in des_col:
+                    data_freq = 'S'
+                if '年' in des_col:
+                    data_freq = 'Y'
+                this_table['frequency'] = data_freq
+            elif '【代碼對照表】' in des_col:
+                this_val = des_col.replace('【代碼對照表】','').replace(' ','')
+                this_table['coid_map'] = this_val if len(this_val)>0 else None
+            elif '【資料表分類】' in des_col:
+                this_val = des_col.replace('【資料表分類】','').replace(' ','')
+                this_table['kind'] = this_val if len(this_val)>0 else None                
+            elif '【代碼欄位】' in des_col:
+                this_val = des_col.replace('【代碼欄位】','').replace(' ','')
+                this_val = this_val if len(this_val)>0 else 'coid'                
+                if this_val not in this_table['columns']:
+                    this_val = None      
+                this_table['coid'] =  this_val
+            elif '【發佈日期欄位】' in des_col:
+                this_val = des_col.replace('【發佈日期欄位】','').replace(' ','')
+                this_val = this_val if len(this_val)>0 else 'mdate' 
+                if this_val not in this_table['columns']:
+                    this_val = None
+                this_table['mdate'] = this_val
+
+        return this_table
     def query_tool(self,
             table_name:str = 'APRCD',query_coid:list = ['2330'],
             mdate_up:str = '2019-12-31',mdate_down:str = '2018-12-31',
@@ -336,7 +381,7 @@ class query_base(object):
         current_data = None
         column_names = list(set(['zdate','mdate','coid']+column_names))
         df = self.all_date_data
-        if self.all_date_data is None:
+        if len(self.all_date_data)<1:
             df = self.prc_basedate
             
         if 'q' not in window:
@@ -517,7 +562,7 @@ class query_base(object):
             self.prc_basedate = fullquery_prc_basedate
         else:
             #先進行刪除，再append，再進行merge
-            append_columns = ['zdate','coid'] + self.append_list
+            append_columns = ['zdate','coid'] + list(set(self.append_list))
             self.prc_basedate = self.prc_basedate.reindex(columns=append_columns)
 
             #要分段append，避免重複

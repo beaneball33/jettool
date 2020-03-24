@@ -59,7 +59,6 @@ def get_category():
 # 查詢按國別分類的資料表完整清單   
 def get_tables():
 
-
     table_names = ('https://api.tej.com.tw/info/tables/list?api_key='
                    +api_key)
     response = requests.get(table_names)
