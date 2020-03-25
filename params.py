@@ -269,6 +269,13 @@ macro_mapping_coids = {
              '歐菲中東指數EUR': 'SB9911',
              '歐菲中東指數LOCAL': 'SB9912'}
    },
+   'TWN/AMT'{
+       'cname':'cname',
+    'val':'close_ny',   
+    'coid_table':None,
+    'coid_list':{'常會':'Y','董事會':'D'
+    }
+   },
    'GLOBAL/GCURR':{
     'cname':'cname',
     'val':'close_ny',   
