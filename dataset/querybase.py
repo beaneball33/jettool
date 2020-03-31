@@ -156,7 +156,7 @@ class query_base(object):
             (this_table.get('mdate') is not None)):
             # 此分類無法只靠欄位名稱整合查詢，必須指定表單名稱加欄位實體名稱做整個查詢(尚未完成)
             # 使用query_dailydata()
-            this_table['kind'] = '事件(3)'            
+            this_table['kind'] = '事件'            
         else:
             # 無法使用得型別
             this_table['kind'] = '非整合'  

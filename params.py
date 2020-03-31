@@ -104,6 +104,21 @@ active_list = []
 not_active_list = []
 
 macro_mapping_coids = {
+   'TWN/AMT':{
+    'cname':'cname',
+    'val':'val',   
+    'coid_table':None,
+    'coid_list':{'Y':'股東常會',
+                'N':'非常會',
+                'D':'董事會'}   
+   },
+   'TWN/AARN':{
+    'cname':'cname',
+    'val':'val',   
+    'coid_table':None,
+    'coid_list':{'注意股票':'注意股票',
+                '處置股票':'處置股票'}   
+   },
    'GLOBAL/GIDX':{
     'cname':'cname',
     'val':'val',   
