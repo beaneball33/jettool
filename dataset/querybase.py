@@ -129,24 +129,24 @@ class query_base(object):
              this_table.get('coid_map') is None):
             # 只有日期key 又沒有對照表 靠略過coid查詢 使用query_dailydata()
             this_table['kind'] = '時序列'
-        elif ((this_table['key_num'] == 2) and 
-            (this_table.get('coid') is None and 
-            (this_table.get('mdate') is not None)):
+        elif (this_table['key_num'] == 2 and 
+             this_table.get('coid') is None and 
+             this_table.get('mdate') is not None):
             # 可合併 只有日期key  coid有對照表 使用query_macrodata()
             this_table['kind'] = '指標'
-        elif ((this_table['key_num'] == 2) and 
-            (this_table.get('coid') is not None and 
-            (this_table.get('mdate') is not None) and             
-            (this_table.get('coid_map') is None)):
+        elif (this_table['key_num'] == 2 and 
+             this_table.get('coid') is not None and 
+             this_table.get('mdate') is not None and             
+             this_table.get('coid_map') is None):
             # 同時有兩key且無對照表 交易檔 使用query_dailydata()
             this_table['kind'] = '交易'            
         elif (this_table.get('coid') is not None and 
             this_table.get('mdate') is None):
             # 缺少【發佈日期欄位】 靜態屬性 暫時使用query_dailydata()
             this_table['kind'] = '屬性'                  
-        elif ((this_table['key_num'] == 3) and 
-            (this_table.get('coid') is not None) and 
-            (this_table.get('mdate') is not None)):
+        elif (this_table['key_num'] == 3 and 
+             this_table.get('coid') is not None and 
+             this_table.get('mdate') is not None):
             # 此分類無法只靠欄位名稱整合查詢，必須指定表單名稱加欄位實體名稱做整個查詢(尚未完成)
             # 使用query_dailydata()
             this_table['kind'] = '事件'            

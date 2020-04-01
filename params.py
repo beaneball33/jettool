@@ -278,7 +278,7 @@ macro_mapping_coids = {
              '歐菲中東指數EUR': 'SB9911',
              '歐菲中東指數LOCAL': 'SB9912'}
    },
-   'TWN/AMT'{
+   'TWN/AMT':{
        'cname':'cname',
     'val':'close_ny',   
     'coid_table':None,
