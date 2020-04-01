@@ -1,10 +1,3 @@
-"""
-TODO LIST:
-
-1.query_basicdata需要改為抽象化查詢，改成到各個屬性table找裡面有標記"基本資料"的，但其實目前只有一個TWN的表
-
-2.query_benchmark需要改為抽象化查詢，改成到各個table找描述裡面有標記'內含績效指標&績效指標代碼'
-"""
 from . import params
 from . import dataset
 from .dataset import querybase
