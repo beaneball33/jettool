@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from . import params
 from . import dataset
 from .dataset import querybase
