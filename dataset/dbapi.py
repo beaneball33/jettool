@@ -1,7 +1,4 @@
-"""
-這是查詢api資料索引目錄的整合工具
-"""
-import tejapi
+﻿import tejapi
 import pandas
 import numpy
 import requests

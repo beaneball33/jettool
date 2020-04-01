@@ -1,16 +1,10 @@
-import pandas
+﻿import pandas
 import numpy
 import os
 import tejapi
 tejapi.ApiConfig.api_key = "your_API_key"
 # https://tw-google-styleguide.readthedocs.io/en/latest/google-python-styleguide/python_style_rules.html
-"""
-在tejtool中，所有的日期皆必須維持datetime64且最小單位到日，ex:"2019-11-23"的格式
-模組初始化後自動產生預設的日期組
-current_zdate        資料觀測日
-datastart_date       資料查詢起日
-backstart_date       回顧測試起始日
-"""
+
 back_length = 365
 query_length = 365*2
 

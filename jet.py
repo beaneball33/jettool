@@ -11,14 +11,6 @@ import json
 import pandas
 class engine(querybase.query_base,
                      backtest.backtest_base):
-    """
-    此為最外層的tool，規範所有讓使用者直接使用的查詢工具
-    必須做到以下防呆處理：
-    1.不需指定股票代碼，自動根據市場別決定股票名單
-    2.不需指定財務科目代碼，自動根據中文名稱決定查詢科目名稱
-    3.日資料的交易日會以該市場的大盤指數為準，校正交易日、補零
-    4.find開頭代表查找某種東西，query開頭代表須要進行api取資料，get代表不進行query在已經取好的資料集中進行資料整合取得
-    """
     def __init__(self,api_key):
         
         self.set_params(params.__dict__,allow_null=True)

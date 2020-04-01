@@ -1,11 +1,4 @@
-"""
-TODO LIST:
-
-1.總經與外匯、利率等單key值轉置控制
-2.記錄各個查詢結果的基本參數：頻率、zdate清單、原始表單與欄位原始實體名稱
-3.query_tradedata()應該要控制不同資料頻率，要有不同的額外查詢區間，以避免0
-"""
-from . import dbapi
+﻿from . import dbapi
 import tejapi
 import pandas
 import numpy
