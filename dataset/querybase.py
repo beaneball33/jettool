@@ -186,13 +186,13 @@ class query_base(object):
             elif '【代碼欄位】' in des_col:
                 this_val = des_col.replace('【代碼欄位】','').replace(' ','')
                 this_val = this_val if len(this_val)>0 else 'coid'                
-                if this_val not in this_table['columns']:
+                if this_val not in this_table['column_list']:
                     this_val = None      
                 this_table['coid'] =  this_val
             elif '【發佈日期欄位】' in des_col:
                 this_val = des_col.replace('【發佈日期欄位】','').replace(' ','')
                 this_val = this_val if len(this_val)>0 else 'mdate' 
-                if this_val not in this_table['columns']:
+                if this_val not in this_table['column_list']:
                     this_val = None
                 this_table['mdate'] = this_val
 
