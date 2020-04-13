@@ -156,7 +156,7 @@ class query_base(object):
     def manage_descrption(self,this_table:dict):
         #判斷key的數量
         this_table['key_num'] = len(this_table['primaryKey'])
-        this_table['columns'] = list(this_table['columns'].keys())
+        this_table['column_list'] = list(this_table['columns'].keys())
         table_des = this_table.get('description').split('<br />')
         this_table['frequency'] = 'U'
         this_table['coid_map'] = None
