@@ -2,8 +2,7 @@
 import numpy
 import os
 import tejapi
-api_key = "your_API_key"
-tejapi.ApiConfig.api_key = api_key
+tejapi.ApiConfig.api_key = "your_API_key"
 # https://tw-google-styleguide.readthedocs.io/en/latest/google-python-styleguide/python_style_rules.html
 
 back_length = 365
