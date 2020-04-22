@@ -217,21 +217,19 @@ class query_base(object):
         command_line+= "opts={'sort':'"+mdate_name+".desc','columns':query_columns}, paginate=True)"
         command_line+= ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"
         """
-        command_line = ["tempdata=tejapi.get('",
+        command_line = ["self.tempdata=tejapi.get('",
                         dataset_name+"',"+coid_name+"=query_coid,",
                         mdate_name+"={'gte':mdate_down,'lte':mdate_up},",
                         "opts={'sort':'"+mdate_name+".desc',",
                         "'columns':query_columns}, paginate=True)",
                         ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"]
         self.tempdata = 'na'
-        print('key:')
         
-        context = {"tempdata":self.tempdata,"api_key":self.api_key,
+        context = {"tempdata":self.tempdata,
                    "query_coid":query_coid,
                    "mdate_down":mdate_down,"mdate_up":mdate_up,
                    "query_columns":query_columns}
                    
-        print(self.api_key)
         self.exec_tool(context,command_line)
         
         #data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
@@ -247,7 +245,7 @@ class query_base(object):
         command_line_str = ''.join(command_line)
         command_line = [
         "import tejapi",
-        "tejapi.ApiConfig.api_key = api_key",
+        "tejapi.ApiConfig.api_key = self.api_key",
         command_line_str,
         ]
         fd, name = tempfile.mkstemp(suffix='.py')
@@ -262,7 +260,7 @@ class query_base(object):
         context['__file__'] = name
 
         exec(compile(source, name, "exec"), context)
-        exec(command_line_str, context)
+
     def get_table_cname(self,table_name:str = 'TWN/APRCD',language:str = 'cname') -> str:
     
         # 取得table名稱並同時透過api查詢該table的資訊

@@ -199,7 +199,10 @@ class method_base(object):
         ans = False
         for d_i in range(0,len(actual_reset_list)):
             #print([pandas.to_datetime(self.current_zdate).strftime('%Y-%m-%d'),actual_reset_list[d_i],reset_list_y[d_i]])
-            if pandas.to_datetime(self.current_zdate).strftime('%Y-%m-%d') == actual_reset_list[d_i] and pandas.to_datetime(self.current_zdate)>=pandas.to_datetime(actual_reset_list[d_i]):
+            this_date = numpy.datetime64(actual_reset_list[d_i])
+            next_date = sorted(self.all_zdate_list[self.all_zdate_list>=this_date])[0]
+            if next_date == self.current_zdate:
+                
                 self.famamacbeth_outcome = None
                 ans = True
                 break
