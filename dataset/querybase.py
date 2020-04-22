@@ -4,6 +4,7 @@ import pandas
 import numpy
 import re
 from .. import params
+import tempfile
 
 class query_base(object):
     def __init__(self):
@@ -216,19 +217,21 @@ class query_base(object):
         command_line+= "opts={'sort':'"+mdate_name+".desc','columns':query_columns}, paginate=True)"
         command_line+= ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"
         """
-        command_line = ["self.tempdata=self.tejapi.get('",
+        command_line = ["tempdata=tejapi.get('",
                         dataset_name+"',"+coid_name+"=query_coid,",
                         mdate_name+"={'gte':mdate_down,'lte':mdate_up},",
                         "opts={'sort':'"+mdate_name+".desc',",
                         "'columns':query_columns}, paginate=True)",
                         ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"]
+        self.tempdata = 'na'
+        print('key:')
         
-        
-        context = {"query_coid":query_coid,
+        context = {"tempdata":self.tempdata,"api_key":self.api_key,
+                   "query_coid":query_coid,
                    "mdate_down":mdate_down,"mdate_up":mdate_up,
                    "query_columns":query_columns}
                    
-
+        print(self.api_key)
         self.exec_tool(context,command_line)
         
         #data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
@@ -242,7 +245,23 @@ class query_base(object):
         context['self'] = self
         context['__name__'] = '__main__'
         command_line_str = ''.join(command_line)
+        command_line = [
+        "import tejapi",
+        "tejapi.ApiConfig.api_key = api_key",
+        command_line_str,
+        ]
+        fd, name = tempfile.mkstemp(suffix='.py')
 
+        with open(fd, 'r+',encoding='utf-8') as f:
+            for line in command_line:
+                f.write(line)
+                f.write('\n')
+            f.seek(0)
+            source = f.read()
+            
+        context['__file__'] = name
+
+        exec(compile(source, name, "exec"), context)
         exec(command_line_str, context)
     def get_table_cname(self,table_name:str = 'TWN/APRCD',language:str = 'cname') -> str:
     
