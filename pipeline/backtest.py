@@ -10,13 +10,42 @@ import seaborn as sns; sns.set()
 sns.set_style("whitegrid", {'axes.grid' : False})
 
 class backtest_base(method.method_base):
-    def back_test(self,back_interval=None,cash=1000000,
+    def set_data(self):
+        self.prc_basedate =  pandas.read_csv('prc_basedate.csv')
+        self.benchmark_roi =  pandas.read_csv('benchmark_roi.csv')
+        self.basic_info =  pandas.read_csv('basic_info.csv')
+        self.findata_all =  pandas.read_csv('findata_all.csv')
+        
+        self.prc_basedate['coid'] = self.prc_basedate['coid'].astype(str)
+        self.prc_basedate['zdate'] = self.prc_basedate['zdate'].astype(str).astype('datetime64')
+     
+        self.benchmark_roi['zdate'] = self.benchmark_roi['zdate'].astype(str).astype('datetime64')     
+        self.benchmark_roi['sdate'] = self.benchmark_roi['zdate'].astype(str).str[0:7].astype('datetime64')      
+        
+        self.basic_info['list_day1'] = self.basic_info['list_day1'].astype(str).astype('datetime64')
+        self.basic_info['list_day2'] = self.basic_info['list_day2'].astype(str).astype('datetime64')
+
+
+        self.findata_all['coid'] = self.findata_all['coid'].astype(str)
+        self.findata_all['zdate'] = self.findata_all['zdate'].astype(str).astype('datetime64')
+        self.findata_all['mdate'] = self.findata_all['mdate'].astype(str).astype('datetime64')
+        self.findata_all['ndate'] = self.findata_all['ndate'].astype(str).astype('datetime64')
+        
+    def back_test(self,back_interval=None,cash=1000000,back_length=90,
                        import_data=None,keep_data=False,
                        calculate=None,evaluate=None,
                        roib_name='報酬率-Ln',closed_name ='收盤價(元)'):
         print('跨股模型計算與回顧測試')
         self.roib_name = roib_name
         self.closed_name = closed_name
+        self.back_length = back_length
+        self.benchmark_roi = self.benchmark_roi.sort_values(by=['zdate'])
+        self.benchmark_roi['績效指標指數-前一日'] = [0] + self.benchmark_roi['績效指標指數'].values[0:len(self.benchmark_roi['績效指標指數'])-1].tolist()
+        self.benchmark_roi['績效指標報酬率'] = numpy.log(self.benchmark_roi['績效指標指數']/self.benchmark_roi['績效指標指數-前一日'])        
+        self.benchmark_roi['績效指標報酬率'] = self.benchmark_roi['績效指標報酬率'].replace([numpy.inf, -numpy.inf], numpy.nan)*100  
+        self.all_zdate_list = numpy.sort(self.benchmark_roi['zdate'].astype(str).unique().astype('datetime64'))[::-1]
+        self.back_date_list = self.all_zdate_list.copy()
+        self.input_coids = self.basic_info['coid'].values.tolist()
         t0 = time.time()
         self.set_back_test(back_interval,import_data,keep_data,cash)
         print([self.cash,self.benchmark_cash])
@@ -44,12 +73,13 @@ class backtest_base(method.method_base):
         self.manage_backtest_outcome()
         lm = sns.relplot(x="zdate", y="present value",height=5, aspect=3, kind="line", hue='pname',legend="full", data=self.simple_roi_data)
         lm.fig.suptitle('每日結算投資現值', fontsize=18)
+        self.current_dir = os.getcwd()
         if self.applied == True:
-            lm.savefig(self.current_dir+'/backtest_pv_'+str(self.roistart_date)+'.png')
+            lm.savefig('backtest_pv_'+str(self.roistart_date)+'.png')
         lm = sns.relplot(x="zdate", y="return",height=5, aspect=3, kind="line", hue='pname', legend="full", data=self.simple_roi_data)
         lm.fig.suptitle('每日損益', fontsize=18)     
         if self.applied == True:
-            lm.savefig(self.current_dir+'/backtest_return_'+str(self.roistart_date)+'.png')    
+            lm.savefig('backtest_return_'+str(self.roistart_date)+'.png')    
         t3 = time.time()
         elapsed_time = t3-t0
         print('total cost'+str(elapsed_time))
@@ -253,8 +283,9 @@ class backtest_base(method.method_base):
                 self.cash = self.cash + self.data['損益'].sum()
                 self.data['總報酬率'] = self.data['總損益']/self.data['現值'].sum()
                 portfolio_sum_roi = self.data['總損益'].unique()[0]/self.data['現值'].sum()
-                portfolio_data = pandas.DataFrame([[next_date,'portfolio',self.cash,self.data['總損益'].unique()[0],portfolio_sum_roi]],columns=['zdate','pname','present value','return','roi'])
-                benchmark_data = pandas.DataFrame([[next_date,'benchmark',self.benchmark_cash,self.benchmark_return,benchmark_roi_rate/100]],columns=['zdate','pname','present value','return','roi'])
+                data_cols = ['zdate','pname','present value','return','roi']
+                portfolio_data = pandas.DataFrame([[next_date,'portfolio',self.cash,self.data['總損益'].unique()[0],portfolio_sum_roi]],columns=data_cols)
+                benchmark_data = pandas.DataFrame([[next_date,'benchmark',self.benchmark_cash,self.benchmark_return,benchmark_roi_rate/100]],columns=data_cols)
                 self.simple_roi_data = self.simple_roi_data.append(portfolio_data,sort=False)
                 self.simple_roi_data = self.simple_roi_data.append(benchmark_data,sort=False)
     def manage_backtest_outcome(self):
@@ -264,7 +295,7 @@ class backtest_base(method.method_base):
         self.portfolio_pv = numpy.nan_to_num(self.simple_roi_data.loc[self.simple_roi_data['pname']=='portfolio','present value'].values)
         self.benchmark_pv = self.simple_roi_data.loc[self.simple_roi_data['pname']=='benchmark','present value'].values
         self.portfolio_roi_rate = numpy.nan_to_num(self.simple_roi_data.loc[self.simple_roi_data['pname']=='portfolio','roi'].values)
-        self.benchmark_roi_rate = self.simple_roi_data.loc[self.simple_roi_data['pname']=='benchmark','roi'].values
+        self.benchmark_roi_rate = numpy.nan_to_num(self.simple_roi_data.loc[self.simple_roi_data['pname']=='benchmark','roi'].values)
         self.portfolio_std = numpy.std(self.portfolio_roi_rate)
         self.benchmark_std = numpy.std(self.benchmark_roi_rate)
         self.maxdrawback = self.calculate_maxdrawback()

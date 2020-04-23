@@ -336,7 +336,7 @@ class method_base(object):
             else:
                 rank_data = False
         return rank_data
-    def equal_pv(self):
+    def equal_pv(self,keep=False):
         #本方法用來產生投資現值相同的持股方式
         #在持股家數不變下，維持相同持股數，異動之公司，投資現值則與其他各檔平均值相同
         this_coid = self.data.loc[(self.data['購入']==True)&(self.data['coid'].isin(self.listed_coids)),'coid'].values
@@ -358,14 +358,16 @@ class method_base(object):
                 self.hold_unit = [this_hold_units] + self.hold_unit
             else:
                 #持股改變，重調權重
-
+                
                 if len(this_coid)>0:
                     unit_pv = self.cash/len(this_coid)
                     this_hold_units = numpy.floor(unit_pv/this_closed)
-                    self.hold_unit = [this_hold_units.tolist()]+ self.hold_unit
+                    this_hold_units = this_hold_units.tolist()
+                    self.hold_unit = [this_hold_units]+ self.hold_unit
                 else:
                     this_hold_units = []
-                    self.hold_unit = [this_hold_units]+ self.hold_unit
+
+                self.hold_unit = [this_hold_units]+ self.hold_unit
         else:
             if len(this_coid)>0:
                 #要有購入才計算

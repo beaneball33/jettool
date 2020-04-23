@@ -12,10 +12,11 @@ import json
 import pandas
 class engine(querybase.query_base,
                      backtest.backtest_base):
-    def __init__(self,api_key):
+    def __init__(self,api_key=None):
         
         self.set_params(params.__dict__,allow_null=True)
-        self.set_apikey(api_key)
+        if api_key is not None:
+            self.set_apikey(api_key)
         #self.load_data()
         
         self.dbapi=dbapi
