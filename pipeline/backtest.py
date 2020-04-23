@@ -6,6 +6,7 @@ import os
 import tempfile
 import contextlib
 import inspect
+import matplotlib.pyplot as plt
 import seaborn as sns; sns.set()
 sns.set_style("whitegrid", {'axes.grid' : False})
 
@@ -71,6 +72,12 @@ class backtest_base(method.method_base):
                 print(pandas.to_datetime(str(self.current_zdate)).strftime('%Y-%m-%d'))
         print('ok')
         self.manage_backtest_outcome()
+        t3 = time.time()
+        elapsed_time = t3-t0
+        print('total cost'+str(elapsed_time))
+        self.draw_roi()
+    def draw_roi(self):
+        
         lm = sns.relplot(x="zdate", y="present value",height=5, aspect=3, kind="line", hue='pname',legend="full", data=self.simple_roi_data)
         lm.fig.suptitle('每日結算投資現值', fontsize=18)
         self.current_dir = os.getcwd()
@@ -80,9 +87,8 @@ class backtest_base(method.method_base):
         lm.fig.suptitle('每日損益', fontsize=18)     
         if self.applied == True:
             lm.savefig('backtest_return_'+str(self.roistart_date)+'.png')    
-        t3 = time.time()
-        elapsed_time = t3-t0
-        print('total cost'+str(elapsed_time))
+
+        plt.show()
     def create_function_text(self,def_func):
         if inspect.isroutine(def_func) is True:
             code_lines = inspect.getsource(def_func).split('\n')
@@ -150,7 +156,7 @@ class backtest_base(method.method_base):
         self.benchmark_cash = self.cash
         self.backstart_date = self.all_zdate_list[start_index] #back_date_list
         
-        self.roistart_date = self.all_zdate_list[0] -  numpy.timedelta64(self.back_length,'D')
+        self.roistart_date = self.all_zdate_list[end_index] -  numpy.timedelta64(self.back_length,'D')
         if self.roistart_date < self.backstart_date:
             self.roistart_date = self.backstart_date        
         self.simple_roi_data = pandas.DataFrame(columns=['zdate','pname','present value','return','roi'])
