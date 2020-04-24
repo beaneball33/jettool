@@ -13,16 +13,27 @@ import pandas
 class engine(querybase.query_base,
                      backtest.backtest_base):
     def __init__(self,api_key=None):
+        self.dbapi=dbapi
+        self.dbapi.api_key = api_key
+        self.finreport = finreport
+        self.finreport.api_key = api_key
         
+        # to-do version check should have a module
+        pandas_version =  pandas.__version__.split('.')
+        if (int(pandas_version[0])==0 and 
+            int(pandas_version[1])<2):
+                raise ImportError(params.pandas_version_error)
+        numpy_version =  numpy.__version__.split('.')
+        if (int(numpy_version[0])==1 and 
+            int(numpy_version[1])<16):
+                raise ImportError(params.numpy_version_error)
+
         self.set_params(params.__dict__,allow_null=True)
         if api_key is not None:
             self.set_apikey(api_key)
         #self.load_data()
         
-        self.dbapi=dbapi
-        self.dbapi.api_key = api_key
-        self.finreport = finreport
-        self.finreport.api_key = api_key
+        
 
     def query_data(self,window='1m',column_names=['收盤價(元)'],*,
                         market=None,base_date=None):

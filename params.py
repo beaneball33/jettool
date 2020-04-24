@@ -97,6 +97,9 @@ transfer_acccode_list = [{'acc_code':'0400','cname':'不動產及設備淨額','
 active_list = []
 not_active_list = []
 
+pandas_version_error = 'jet engine launch error:please update pandas version to 0.25.1 or later'
+numpy_version_error = 'jet engine launch error:please update numpy version to 1.16.1 or later'
+
 macro_mapping_coids = {
    'TWN/AMT':{
     'cname':'cname',
