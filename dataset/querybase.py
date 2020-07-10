@@ -1,9 +1,9 @@
-﻿from . import dbapi
-import tejapi
+﻿import tejapi
+from . import dbapi
 import pandas
 import numpy
 import re
-from .. import params
+from jettool import params
 import tempfile
 
 class query_base(object):
@@ -16,18 +16,20 @@ class query_base(object):
             if '__' not in param and not callable(new_params.get(param)):   
                 if self.__dict__.get(param) is not None or allow_null is True:
                     self.__dict__[param] = new_params.get(param)
-                    
+    def get_locals(self):
+        context = {k:v for k,v in self.__dict__.items() if '__' not in k and not callable(v)}
+        return context              
     def set_apikey(self,api_key:str = 'yourkey'):
         # 使用者設定api key之後的各種工作
         self.tejapi.ApiConfig.api_key = api_key
         self.api_key = api_key
-        dbapi.api_key = self.api_key
-        self.info = dbapi.get_info()
+        self.info = dbapi.get_info(api_key)
         tables = list(self.info.get('user').get('tables').keys())
+        print('查詢 tej資料索引')
         self.api_tables = dbapi.set_tablelist(tables)
-        self.market_list = dbapi.get_market()
-        self.category_list = dbapi.get_category()
-        self.table_list = dbapi.get_tables()
+        self.market_list = dbapi.get_market(api_key)
+        self.category_list = dbapi.get_category(api_key)
+        self.table_list = dbapi.get_tables(api_key)
         # 標準化日資料(有zdate，不需轉置)的查詢工具)，以便給定欄位名稱就可以查詢
         self.set_query_ordinary()        
         
@@ -61,6 +63,8 @@ class query_base(object):
         #按照category_list中的順序，將可查詢的表拼湊
         category_id_list = [4,3,2,1]
         for category_id in category_id_list:
+            category_name = self.category_list.get(category_id).get('categoryName')
+            print('查詢 '+category_name+' 權限')
             for subcategory in self.category_list.get(category_id).get('subs'):
                 for table_attr in subcategory.get('tableMap'):
                     table_name = table_attr.get('tableId')
@@ -70,12 +74,13 @@ class query_base(object):
                         ):
                          # 必須是在可查詢清單中才開始查資料表資訊，否則浪費頻寬
                         dataset_name = self.get_dataset_name(table_name)
-                        table_info = self.table_info[dataset_name]
-                        if category_id == 1:
-                            # 總經類單獨處理
-                            self.manage_marco_dataset(dataset_name)
-                        elif table_info['frequency'] in self.all_prc_dataset_freq:
-                            self.all_prc_dataset.append(table_name)
+                        if dataset_name is not None:
+                            table_info = self.table_info[dataset_name]
+                            if category_id == 1:
+                                # 總經類單獨處理
+                                self.manage_marco_dataset(dataset_name)
+                            elif table_info['frequency'] in self.all_prc_dataset_freq:
+                                self.all_prc_dataset.append(table_name)
 
                                                         
     def manage_marco_dataset(self,table_name):
@@ -115,6 +120,8 @@ class query_base(object):
         
         if self.table_info.get(dataset_name) is None:
             dataset_table = self.tejapi.table_info(dataset_name)
+            if dataset_table.get('error') is not None:
+                return None
             self.table_info[dataset_name] = self.manage_descrption(dataset_table)
             """
             except (RuntimeError, TypeError, NameError):

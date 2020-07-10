@@ -1,0 +1,17 @@
+﻿api_key = 'yourkey'
+active_view=False
+announceTable = 'TWN/AIFINQA'
+findataTable = 'TWN/AIFINQ'
+activeAnnounceTable = 'TWN/AINVFINQA'
+activeFindataTable='TWN/AINVFINQ'
+accountData = 'na'
+activeAccountData = 'na'
+input_coids = ['2330','2002','2882']
+acc_code = []
+acc_code_name = []
+indicator_attr = {}
+indicator_name = {}
+active_list = []
+not_active_list = []
+transfer_acccode_list = [{'acc_code':'0400','cname':'不動產及設備淨額','new_acc_code':'BP51','new_name':'固定資產'},{'acc_code':'0820','cname':'無形資產','new_acc_code':'BP53','new_name':'無形資產'},{'acc_code':'032A','cname':'投資性不動產淨額','new_acc_code':'BV31','new_name':'投資性不動產'},{'acc_code':'2110','cname':'普通股股本','new_acc_code':'BF41','new_name':'普通股股本'},{'acc_code':'2310','cname':'資本公積合計','new_acc_code':'BF42','new_name':'資本公積'},{'acc_code':'2341','cname':'保留盈餘','new_acc_code':'BF43','new_name':'保留盈餘'},{'acc_code':'2120','cname':'特別股股本','new_acc_code':'BF44','new_name':'特別股股本'},{'acc_code':'2900','cname':'非控制權益','new_acc_code':'BF45','new_name':'非控制權益'},{'acc_code':'2480','cname':'其他權益','new_acc_code':'BF99','new_name':'其他權益'},{'acc_code':'0100','cname':'流動資產','new_acc_code':'BSCA','new_name':'流動資產合計'},{'acc_code':'0960','cname':'非流動資產','new_acc_code':'BSNCA','new_name':'非流動資產合計'},{'acc_code':'0010','cname':'資產總額','new_acc_code':'BSTA','new_name':'資產總計'},{'acc_code':'1100','cname':'流動負債','new_acc_code':'BSCL','new_name':'流動負債合計'},{'acc_code':'1800','cname':'非流動負債','new_acc_code':'BSNCL','new_name':'非流動負債合計'},{'acc_code':'1000','cname':'負債總額','new_acc_code':'BSTL','new_name':'負債總額'},{'acc_code':'2000','cname':'股東權益總額','new_acc_code':'BSSE','new_name':'股東權益總計'},{'acc_code':'3100','cname':'營業收入','new_acc_code':'IP11','new_name':'營業收入'},{'acc_code':'3200','cname':'營業成本','new_acc_code':'IP21','new_name':'營業成本'},{'acc_code':'3300','cname':'營業費用','new_acc_code':'IP31','new_name':'營業費用'},{'acc_code':'3910','cname':'所得稅費用','new_acc_code':'IP51','new_name':'所得稅'},{'acc_code':'3501','cname':'財務成本','new_acc_code':'IF11','new_name':'利息支出'},{'acc_code':'3900','cname':'稅前淨利','new_acc_code':'ISIBT','new_name':'利潤總額'},{'acc_code':'3970','cname':'合併總損益','new_acc_code':'ISNI','new_name':'淨利潤'},{'acc_code':'3950','cname':'歸屬母公司淨利(損)','new_acc_code':'ISNIP','new_name':'母公司淨利'},{'acc_code':'3990','cname':'每股盈餘','new_acc_code':'EPS','new_name':'母公司每股盈餘'},{'acc_code':'3295','cname':'營業毛利','new_acc_code':'GM','new_name':'毛利'},{'acc_code':'3395','cname':'營業利益','new_acc_code':'OPI','new_name':'營業利益'},{'acc_code':'R531','cname':'常續性利益','new_acc_code':'RI','new_name':'常續性利益'},{'acc_code':'7910','cname':'期初現金及約當現金','new_acc_code':'CSBCH','new_name':'期初現金及等價物淨額'},{'acc_code':'7210','cname':'來自營運之現金流量','new_acc_code':'CSCFO','new_name':'營運產生現金流量'},{'acc_code':'7300','cname':'投資活動之現金流量','new_acc_code':'CSCFI','new_name':'投資產生現金流量'},{'acc_code':'7400','cname':'籌資活動之現金流量','new_acc_code':'CSCFF','new_name':'融資產生現金流量'},{'acc_code':'7920','cname':'期末現金及約當現金','new_acc_code':'CSECH','new_name':'期末現金及等價物淨額'}]    
+context = {k:v for k,v in locals().items() if '__' not in k}

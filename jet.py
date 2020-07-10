@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import tejapi
 from . import params
 from . import dataset
 from .dataset import querybase
@@ -13,11 +14,11 @@ import pandas
 class engine(querybase.query_base,
                      backtest.backtest_base):
     def __init__(self,api_key=None):
+        if api_key is None and globals().get('tejapi') is not None:
+            api_key = globals().get('tejapi').ApiConfig.api_key    
         self.dbapi=dbapi
-        self.dbapi.api_key = api_key
         self.finreport = finreport
-        self.finreport.api_key = api_key
-        
+        self.tejapi = tejapi
         # to-do version check should have a module
         pandas_version =  pandas.__version__.split('.')
         if (int(pandas_version[0])==0 and 
@@ -29,10 +30,11 @@ class engine(querybase.query_base,
                 raise ImportError(params.numpy_version_error)
 
         self.set_params(params.__dict__,allow_null=True)
+
         if api_key is not None:
             self.set_apikey(api_key)
         #self.load_data()
-        
+        print('tej jettool初始化完成')
         
 
     def query_data(self,window='1m',column_names=['收盤價(元)'],*,
@@ -123,12 +125,11 @@ class engine(querybase.query_base,
         #用來初始化查詢用的基本資料
        
         #取得上市公司清單
-
         self.query_basicdata(base_startdate=self.datastart_date)    
         #取得標準交易日期資料
         self.query_benchmark(base_startdate=self.datastart_date,
                            base_date=self.dataend_date)
-        self.finreport.set_params(self.__dict__)
+        self.finreport.set_params(self.get_locals())
         self.finreport.inital_report()
 
         self.set_params(self.finreport.params.__dict__)
@@ -139,7 +140,7 @@ class engine(querybase.query_base,
         print('查詢財報資料')
         
         acc_name = available_cname.get('columns_cname')
-        self.finreport.set_params(self.__dict__)
+        self.finreport.set_params(self.get_locals())
         self.finreport.inital_report()   
         if len(acc_name) ==0:
             acc_name = ['常續性稅後淨利']
@@ -255,7 +256,7 @@ class engine(querybase.query_base,
         prc_table_list = self.category_list[4]
         # 從分類表中查詢可用的資料表
         
-        self.benchmark_roi = self.tejapi.get('TWN/AAPRCDA',coid=benchmark_id,
+        self.benchmark_roi = self.tejapi.get('TWN/APRCD',coid=benchmark_id,
             mdate={'gte':base_startdate,'lte':base_date},
             opts={"sort":"mdate.desc",'columns':['mdate','close_d']},
             paginate=True).rename(index=str, columns=rename_column)
