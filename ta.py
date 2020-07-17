@@ -85,8 +85,6 @@ def STOCH(high=None,low=None,close=None,data=None,fastk_period=5, slowk_period=3
         data = {'high_d':high,'low_d':low,'close_d':close}
     df, coid_date_array = process_sample(data,['high_d','low_d','close_d'])
 
-    zdate = df[[date_name]].drop_duplicates().sort_values(by=[date_name],ascending=False).reset_index(drop=True).reset_index()
-    df = df.merge(zdate,on=[date_name],how='left')
     k_9_high = df['high_d'].rolling(fastk_period).max()
     k_9_low = df['low_d'].rolling(fastk_period).min()
     df['rsv'] = (df['close_d'].values - k_9_low)*100/(k_9_high - k_9_low)
