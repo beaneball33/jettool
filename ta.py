@@ -74,10 +74,14 @@ def MACD(close=None,data=None,fastperiod = 12,slowperiod = 26,signalperiod = 9):
         data = {'close_d':close}
     df, coid_date_array = process_sample(data,['close_d'])
     
-    df['dif'] = df['close_d'].rolling(fastperiod).mean() - df['close_d'].rolling(slowperiod).mean()
-    df['macd'] = df['dif'].rolling(signalperiod).mean()
+    ema_fast = df['close_d'].ewm(span=fastperiod).mean()
+    ema_slow = df['close_d'].ewm(span=slowperiod).mean()
+    
+    df['macd'] = ema_fast- ema_slow
+    df['macdsignal'] = df['macd'].ewm(span=signalperiod).mean()
+    df['macdhist'] = df['macd'] - df['macdsignal']
     df = merge_output(df,coid_date_array)
-    return df[['dif','macd']]
+    return df[['macd','macdsignal','macdhist']]
 
 def STOCH(high=None,low=None,close=None,data=None,fastk_period=5, slowk_period=3, slowd_period=3,alpha = 1/3):
 
