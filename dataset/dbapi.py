@@ -1,15 +1,12 @@
-"""
-這是查詢api資料索引目錄的整合工具
-"""
-import tejapi
+﻿import tejapi
 import pandas
 import numpy
 import requests
 import json
-api_key = ''
+
 
 # 取得該使用者能存取的所有table的資訊
-def get_info():
+def get_info(api_key):
 
     tejapi.ApiConfig.api_key = api_key
     info = tejapi.ApiConfig.info()
@@ -40,7 +37,7 @@ def set_tablelist(tables:list):
     return api_tables
 
 # 查詢所有的國別的資料庫資訊  
-def get_market():
+def get_market(api_key):
 
     db_names = ('https://api.tej.com.tw/info/database/list?api_key='
                 +api_key)
@@ -50,7 +47,7 @@ def get_market():
     return market_list
 
 # 查詢所有資料分類的資料庫    
-def get_category():
+def get_category(api_key):
        
     list_names = ('https://api.tej.com.tw/info/category/list?api_key='
                   +api_key)
@@ -61,7 +58,7 @@ def get_category():
 
 # 查詢按國別分類的資料表完整清單   
 # 查詢所有資料表資訊內容
-def get_tables():
+def get_tables(api_key):
 
     table_names = ('https://api.tej.com.tw/info/tables/list?api_key='
                    +api_key)
@@ -140,7 +137,7 @@ def get_table_mapping(table_name:str = 'TWN/AIND',*,
                 
 # 使用tejapi.search_table進行交集或聯集查詢
 # 輸入要搜尋的關鍵字，並且產出完整會計科目的中文名稱                    
-def search_column(*, market:str = 'TWN', keyword:str = '報酬率',
+def search_column(*, api_key='', market:str = 'TWN', keyword:str = '報酬率',
                     condition:str = 'and', current_market=True):
 
     tejapi.ApiConfig.api_key = api_key
@@ -180,7 +177,7 @@ def search_column(*, market:str = 'TWN', keyword:str = '報酬率',
     return match_df
     
 # 取得指定資料庫的完整資料庫欄位表
-def get_table_columns(*, table_name:str = 'TWN/AAPRCDA') -> list:
+def get_table_columns(*, api_key='', table_name:str = 'TWN/AAPRCDA') -> list:
 
     tejapi.ApiConfig.api_key = api_key
     columns_name = []

@@ -1,16 +1,10 @@
-"""
-TODO LIST:
-
-1.總經與外匯、利率等單key值轉置控制
-2.記錄各個查詢結果的基本參數：頻率、zdate清單、原始表單與欄位原始實體名稱
-3.query_tradedata()應該要控制不同資料頻率，要有不同的額外查詢區間，以避免0
-"""
+﻿import tejapi
 from . import dbapi
-import tejapi
 import pandas
 import numpy
 import re
-from .. import params
+from jettool import params
+import tempfile
 
 class query_base(object):
     def __init__(self):
@@ -22,18 +16,20 @@ class query_base(object):
             if '__' not in param and not callable(new_params.get(param)):   
                 if self.__dict__.get(param) is not None or allow_null is True:
                     self.__dict__[param] = new_params.get(param)
-                    
+    def get_locals(self):
+        context = {k:v for k,v in self.__dict__.items() if '__' not in k and not callable(v)}
+        return context              
     def set_apikey(self,api_key:str = 'yourkey'):
         # 使用者設定api key之後的各種工作
         self.tejapi.ApiConfig.api_key = api_key
         self.api_key = api_key
-        dbapi.api_key = self.api_key
-        self.info = dbapi.get_info()
+        self.info = dbapi.get_info(api_key)
         tables = list(self.info.get('user').get('tables').keys())
+        print('查詢 tej資料索引')
         self.api_tables = dbapi.set_tablelist(tables)
-        self.market_list = dbapi.get_market()
-        self.category_list = dbapi.get_category()
-        self.table_list = dbapi.get_tables()
+        self.market_list = dbapi.get_market(api_key)
+        self.category_list = dbapi.get_category(api_key)
+        self.table_list = dbapi.get_tables(api_key)
         # 標準化日資料(有zdate，不需轉置)的查詢工具)，以便給定欄位名稱就可以查詢
         self.set_query_ordinary()        
         
@@ -67,6 +63,8 @@ class query_base(object):
         #按照category_list中的順序，將可查詢的表拼湊
         category_id_list = [4,3,2,1]
         for category_id in category_id_list:
+            category_name = self.category_list.get(category_id).get('categoryName')
+            print('查詢 '+category_name+' 權限')
             for subcategory in self.category_list.get(category_id).get('subs'):
                 for table_attr in subcategory.get('tableMap'):
                     table_name = table_attr.get('tableId')
@@ -76,12 +74,13 @@ class query_base(object):
                         ):
                          # 必須是在可查詢清單中才開始查資料表資訊，否則浪費頻寬
                         dataset_name = self.get_dataset_name(table_name)
-                        table_info = self.table_info[dataset_name]
-                        if category_id == 1:
-                            # 總經類單獨處理
-                            self.manage_marco_dataset(dataset_name)
-                        elif table_info['frequency'] in self.all_prc_dataset_freq:
-                            self.all_prc_dataset.append(table_name)
+                        if dataset_name is not None:
+                            table_info = self.table_info[dataset_name]
+                            if category_id == 1:
+                                # 總經類單獨處理
+                                self.manage_marco_dataset(dataset_name)
+                            elif table_info['frequency'] in self.all_prc_dataset_freq:
+                                self.all_prc_dataset.append(table_name)
 
                                                         
     def manage_marco_dataset(self,table_name):
@@ -121,6 +120,8 @@ class query_base(object):
         
         if self.table_info.get(dataset_name) is None:
             dataset_table = self.tejapi.table_info(dataset_name)
+            if dataset_table.get('error') is not None:
+                return None
             self.table_info[dataset_name] = self.manage_descrption(dataset_table)
             """
             except (RuntimeError, TypeError, NameError):
@@ -136,34 +137,34 @@ class query_base(object):
              this_table.get('coid_map') is None):
             # 只有日期key 又沒有對照表 靠略過coid查詢 使用query_dailydata()
             this_table['kind'] = '時序列'
-        elif ((this_table['key_num'] == 2) and 
-            (this_table.get('coid') is None and 
-            (this_table.get('mdate') is not None)):
+        elif (this_table['key_num'] == 2 and 
+             this_table.get('coid') is None and 
+             this_table.get('mdate') is not None):
             # 可合併 只有日期key  coid有對照表 使用query_macrodata()
             this_table['kind'] = '指標'
-        elif ((this_table['key_num'] == 2) and 
-            (this_table.get('coid') is not None and 
-            (this_table.get('mdate') is not None) and             
-            (this_table.get('coid_map') is None)):
+        elif (this_table['key_num'] == 2 and 
+             this_table.get('coid') is not None and 
+             this_table.get('mdate') is not None and             
+             this_table.get('coid_map') is None):
             # 同時有兩key且無對照表 交易檔 使用query_dailydata()
             this_table['kind'] = '交易'            
         elif (this_table.get('coid') is not None and 
             this_table.get('mdate') is None):
             # 缺少【發佈日期欄位】 靜態屬性 暫時使用query_dailydata()
             this_table['kind'] = '屬性'                  
-        elif ((this_table['key_num'] == 3) and 
-            (this_table.get('coid') is not None) and 
-            (this_table.get('mdate') is not None)):
+        elif (this_table['key_num'] == 3 and 
+             this_table.get('coid') is not None and 
+             this_table.get('mdate') is not None):
             # 此分類無法只靠欄位名稱整合查詢，必須指定表單名稱加欄位實體名稱做整個查詢(尚未完成)
             # 使用query_dailydata()
-            this_table['kind'] = '事件(3)'            
+            this_table['kind'] = '事件'            
         else:
             # 無法使用得型別
             this_table['kind'] = '非整合'  
     def manage_descrption(self,this_table:dict):
         #判斷key的數量
         this_table['key_num'] = len(this_table['primaryKey'])
-        this_table['columns'] = list(this_table['columns'].keys())
+        this_table['column_list'] = list(this_table['columns'].keys())
         table_des = this_table.get('description').split('<br />')
         this_table['frequency'] = 'U'
         this_table['coid_map'] = None
@@ -193,13 +194,13 @@ class query_base(object):
             elif '【代碼欄位】' in des_col:
                 this_val = des_col.replace('【代碼欄位】','').replace(' ','')
                 this_val = this_val if len(this_val)>0 else 'coid'                
-                if this_val not in this_table['columns']:
+                if this_val not in this_table['column_list']:
                     this_val = None      
                 this_table['coid'] =  this_val
             elif '【發佈日期欄位】' in des_col:
                 this_val = des_col.replace('【發佈日期欄位】','').replace(' ','')
                 this_val = this_val if len(this_val)>0 else 'mdate' 
-                if this_val not in this_table['columns']:
+                if this_val not in this_table['column_list']:
                     this_val = None
                 this_table['mdate'] = this_val
 
@@ -223,19 +224,19 @@ class query_base(object):
         command_line+= "opts={'sort':'"+mdate_name+".desc','columns':query_columns}, paginate=True)"
         command_line+= ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"
         """
-        command_line = ["self.tempdata=self.tejapi.get('",
+        command_line = ["self.tempdata=tejapi.get('",
                         dataset_name+"',"+coid_name+"=query_coid,",
                         mdate_name+"={'gte':mdate_down,'lte':mdate_up},",
                         "opts={'sort':'"+mdate_name+".desc',",
                         "'columns':query_columns}, paginate=True)",
                         ".rename(index=str, columns={'"+mdate_name+"':'zdate'})"]
+        self.tempdata = 'na'
         
-        
-        context = {"query_coid":query_coid,
+        context = {"tempdata":self.tempdata,
+                   "query_coid":query_coid,
                    "mdate_down":mdate_down,"mdate_up":mdate_up,
                    "query_columns":query_columns}
                    
-
         self.exec_tool(context,command_line)
         
         #data['zdate'] = pandas.to_datetime(data['zdate'].values,utc=True)
@@ -249,8 +250,24 @@ class query_base(object):
         context['self'] = self
         context['__name__'] = '__main__'
         command_line_str = ''.join(command_line)
+        command_line = [
+        "import tejapi",
+        "tejapi.ApiConfig.api_key = self.api_key",
+        command_line_str,
+        ]
+        fd, name = tempfile.mkstemp(suffix='.py')
 
-        exec(command_line_str, context)
+        with open(fd, 'r+',encoding='utf-8') as f:
+            for line in command_line:
+                f.write(line)
+                f.write('\n')
+            f.seek(0)
+            source = f.read()
+            
+        context['__file__'] = name
+
+        exec(compile(source, name, "exec"), context)
+
     def get_table_cname(self,table_name:str = 'TWN/APRCD',language:str = 'cname') -> str:
     
         # 取得table名稱並同時透過api查詢該table的資訊

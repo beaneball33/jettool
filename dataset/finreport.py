@@ -1,32 +1,23 @@
-"""
-此為整合查詢會計報表的工具，使用do_query()為整合查詢函數
-此工具與jet.engine合併使用時，由於jet.engine沒有params，而是直接存在self下的名稱空間
-故必須將兩邊的params同步，先將self下的名稱空間__dict__以finreport.set_params()存入到finreport.params
-執行完finreport任何會改變params的函式後，以jet.engin.set_params()
-將finreport.params回存到self下的名稱空間__dict__
-"""
-
-import tejapi
+﻿import tejapi
 import pandas
 import numpy
-from .. import params
-api_key=''	
-
+from jettool.dataset import params	
+params.api_key = globals().get('tejapi').ApiConfig.api_key   
 def set_params(new_params):
-    for param in new_params:
-        # 只取用新dict中是普通參數的部分
-        if '__' not in param and not callable(new_params.get(param)):  
-            
-            # 只更新兩者共通參數
-            if params.__dict__.get(param) is not None:
-                params.__dict__[param] = new_params.get(param)
-                
+    #context = {}
+    #for param in new_params:
+    #    # 只取用新dict中是普通參數的部分
+    #    if '__' not in param and not callable(new_params.get(param)):              
+    #        # 只更新兩者共通參數
+    #        if locals().get(param) is not None:
+    #            context[param] = new_params.get(param)
+    params.__dict__.update(new_params)  
 # 找出會計代碼對照表，產出 accountData           
 def inital_report(*, code_table:str = 'TWN/AIACC',
                     actvie_code_table:str = 'TWN/AINVFACC_INFO_C'):
 
     if params.accountData is 'na':
-        tejapi.ApiConfig.api_key = api_key
+        tejapi.ApiConfig.api_key = params.api_key
         params.accountData = tejapi.get(code_table)
         params.activeAccountData = tejapi.get(actvie_code_table)
         params.accountData['cname'] = params.accountData['cname'].str.replace('(', '（').replace(')', '）')
@@ -59,7 +50,7 @@ def get_by_cgrp(cgrp:list = ['損益表'], *, active_view:bool = False):
 # 輸入:acc_name(會計科目中文名稱)，可以獲得會計科目代碼(query_code)     
 def get_acc_code(acc_name:list = [], *, active_view:bool = False):
 
-    tejapi.ApiConfig.api_key = api_key
+    tejapi.ApiConfig.api_key = params.api_key
 
     inital_report()
     ans = []
@@ -86,7 +77,7 @@ def get_acc_code(acc_name:list = [], *, active_view:bool = False):
 # 查詢指定日期之間的個股財報公布日
 def get_announce(*, table_id:str = None, query_coid:list = [], sample_dates:list = []):
 
-    tejapi.ApiConfig.api_key = api_key
+    tejapi.ApiConfig.api_key = params.api_key
     if table_id is None:
         table_id = params.announceTable
     if len(query_coid) == 0:
@@ -109,7 +100,7 @@ def get_report(*, query_code:list = [], query_coid:list = [],
                  sample_dates:list = [], rename_cols:bool= True):
     params.acc_code = query_code
 
-    tejapi.ApiConfig.api_key = api_key
+    tejapi.ApiConfig.api_key = params.api_key
 
     if len(query_coid) == 0:
         query_coid = params.input_coids
@@ -160,7 +151,7 @@ def get_active_report(*, query_code:list = [], query_coid:list = [],
                         sample_dates:list = []):
     params.acc_code = query_code
 
-    tejapi.ApiConfig.api_key = api_key
+    tejapi.ApiConfig.api_key = params.api_key
     if len(query_coid) == 0:
         query_coid = params.input_coids.copy()
     query_column = ['coid', 'mdate', 'fin_od'] + params.acc_code

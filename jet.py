@@ -1,10 +1,5 @@
-"""
-TODO LIST:
-
-1.query_basicdata需要改為抽象化查詢，改成到各個屬性table找裡面有標記"基本資料"的，但其實目前只有一個TWN的表
-
-2.query_benchmark需要改為抽象化查詢，改成到各個table找描述裡面有標記'內含績效指標&績效指標代碼'
-"""
+# -*- coding: utf-8 -*-
+import tejapi
 from . import params
 from . import dataset
 from .dataset import querybase
@@ -18,24 +13,29 @@ import json
 import pandas
 class engine(querybase.query_base,
                      backtest.backtest_base):
-    """
-    此為最外層的tool，規範所有讓使用者直接使用的查詢工具
-    必須做到以下防呆處理：
-    1.不需指定股票代碼，自動根據市場別決定股票名單
-    2.不需指定財務科目代碼，自動根據中文名稱決定查詢科目名稱
-    3.日資料的交易日會以該市場的大盤指數為準，校正交易日、補零
-    4.find開頭代表查找某種東西，query開頭代表須要進行api取資料，get代表不進行query在已經取好的資料集中進行資料整合取得
-    """
-    def __init__(self,api_key):
-        
-        self.set_params(params.__dict__,allow_null=True)
-        self.set_apikey(api_key)
-        #self.load_data()
-        
+    def __init__(self,api_key=None):
+        if api_key is None and globals().get('tejapi') is not None:
+            api_key = globals().get('tejapi').ApiConfig.api_key    
         self.dbapi=dbapi
-        self.dbapi.api_key = api_key
         self.finreport = finreport
-        self.finreport.api_key = api_key
+        self.tejapi = tejapi
+        # to-do version check should have a module
+        pandas_version =  pandas.__version__.split('.')
+        if (int(pandas_version[0])==0 and 
+            int(pandas_version[1])<2):
+                raise ImportError(params.pandas_version_error)
+        numpy_version =  numpy.__version__.split('.')
+        if (int(numpy_version[0])==1 and 
+            int(numpy_version[1])<16):
+                raise ImportError(params.numpy_version_error)
+
+        self.set_params(params.__dict__,allow_null=True)
+
+        if api_key is not None:
+            self.set_apikey(api_key)
+        #self.load_data()
+        print('tej jettool初始化完成')
+        
 
     def query_data(self,window='1m',column_names=['收盤價(元)'],*,
                         market=None,base_date=None):
@@ -125,12 +125,11 @@ class engine(querybase.query_base,
         #用來初始化查詢用的基本資料
        
         #取得上市公司清單
-
         self.query_basicdata(base_startdate=self.datastart_date)    
         #取得標準交易日期資料
         self.query_benchmark(base_startdate=self.datastart_date,
                            base_date=self.dataend_date)
-        self.finreport.set_params(self.__dict__)
+        self.finreport.set_params(self.get_locals())
         self.finreport.inital_report()
 
         self.set_params(self.finreport.params.__dict__)
@@ -141,7 +140,7 @@ class engine(querybase.query_base,
         print('查詢財報資料')
         
         acc_name = available_cname.get('columns_cname')
-        self.finreport.set_params(self.__dict__)
+        self.finreport.set_params(self.get_locals())
         self.finreport.inital_report()   
         if len(acc_name) ==0:
             acc_name = ['常續性稅後淨利']
@@ -257,7 +256,7 @@ class engine(querybase.query_base,
         prc_table_list = self.category_list[4]
         # 從分類表中查詢可用的資料表
         
-        self.benchmark_roi = self.tejapi.get('TWN/AAPRCDA',coid=benchmark_id,
+        self.benchmark_roi = self.tejapi.get('TWN/APRCD',coid=benchmark_id,
             mdate={'gte':base_startdate,'lte':base_date},
             opts={"sort":"mdate.desc",'columns':['mdate','close_d']},
             paginate=True).rename(index=str, columns=rename_column)
