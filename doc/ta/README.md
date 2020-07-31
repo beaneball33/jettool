@@ -44,7 +44,7 @@ ta.RSI(df.close_d)
 說明：參數說明：<ul>
 <li>close:(numpy array, not None) 日股價收盤價</li>
 <li>roi:(numpy array) 日股價報酬率，若停工此資料，則改以此做為報酬率，可考慮除權息問題。</li>
-<li>timeperiod:(int,14) 快線區間日數, </li>
+<li>timeperiod:(int,10) 快線區間日數, </li>
 
 </ul>  
 使用範例：
