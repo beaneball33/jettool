@@ -8,7 +8,9 @@ tejapi jettool(https://api.tej.com.tw/ "tejapi")
 
 #### 技術指標計算工具
 
-[ta技術指標模組說明頁面](https://github.com/beaneball33/jettool/tree/pure/doc/ta)
+此工具提供常用技術指標之計算，並提供abstract方式運算。所有技術指標之參數，皆與ta-lib套件以相同預設值提供。
+
+[ta技術指標模組各函式說明頁面](https://github.com/beaneball33/jettool/tree/pure/doc/ta)
 
 匯入模組：
 ```
