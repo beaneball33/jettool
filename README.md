@@ -18,25 +18,25 @@ pyfolio](https://nbviewer.jupyter.org/format/slides/github/quantopian/pyfolio/bl
 使用套件前，建議先匯入tejapi模組，並設定tej api key。
 tej api key須申請，否則此套件無法進行查詢功能。
 
-```import tejapi
-```tejapi.ApiConfig.api_key ="你的tej api key"
-```import jettool
+import tejapi
+tejapi.ApiConfig.api_key ="你的tej api key"
+import jettool
 
 #### 初始化整合工具
 
 輸入以下的指令，可以產生整合查詢、計算與回測工具物件：
 
-```tejtool = jettool.jet.engine()
-```
+tejtool = jettool.jet.engine()
+
 
 #### 匯入財報查詢工具
 
 輸入以下指令，可以匯入財報查詢工具：
 
-```import tejapi
-```tejapi.ApiConfig.api_key ="你的tej api key"
-``` import jettool.dataset.finreport as fp
-```
+import tejapi
+tejapi.ApiConfig.api_key ="你的tej api key"
+import jettool.dataset.finreport as fp
+
 
 ## 使用
 
