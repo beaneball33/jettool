@@ -1,5 +1,9 @@
 **STOCH**  
 功能概述：計算隨機震盪指標 Stochastic Oscillator，即KD指標。
+使用範例：
+```
+ta.STOCH(df.high_d, df.low_d, df.close_d)
+```
 說明：參數說明：<ul>
 <li>high:(numpy array, not None) 日股價最高價</li>
 <li>low:(numpy array, not None) 日股價最低價</li>
@@ -8,10 +12,7 @@
 <li>slowk_period:(int,3) 慢速k區間日數</li>
 <li>slowd_period:(int,3) 快速d區間日數</li>
 </ul>  
-使用範例：
-```
-ta.STOCH(df.high_d, df.low_d, df.close_d)
-```
+
 
 
 **MACD**  
