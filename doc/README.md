@@ -8,7 +8,7 @@ tejapi jettool(https://api.tej.com.tw/ "tejapi")
 
 #### 技術指標計算工具
 
-[ta](https://nbviewer.jupyter.org/format/slides/github/quantopian/pyfolio/blob/master/pyfolio/examples/pyfolio_talk_slides.ipynb#/).
+[ta技術指標模組說明頁面](https://github.com/beaneball33/jettool/tree/pure/doc/ta)
 
 匯入模組：
 ```
