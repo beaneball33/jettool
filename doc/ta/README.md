@@ -37,18 +37,32 @@ ta.RSI(df.close_d)
 ```
 說明：參數說明：<ul>
 <li>close:(numpy array, not None) 日股價收盤價</li>
-<li>timeperiod:(int,14) 快線區間日數, </li>
+<li>timeperiod:(int,14) 樣本區間日數, </li>
 </ul>  
 
 
 **MOM**  
-功能概述：計算運動量指標 Momentum。
+功能概述：計算動能指標 Momentum。
 使用範例：
 ```
 ta.MOM(df.close_d)
 ```
 說明：參數說明：<ul>
 <li>close:(numpy array, not None) 日股價收盤價</li>
-<li>roi:(numpy array) 日股價報酬率，若停工此資料，則改以此做為報酬率，可考慮除權息問題。</li>
-<li>timeperiod:(int,10) 快線區間日數, </li>
+<li>roi:(numpy array) 日股價報酬率，若提供此資料，則改以此做為報酬率，可考慮除權息問題。</li>
+<li>timeperiod:(int,10) 樣本區間日數, </li>
+</ul>  
+
+**BBANDS**  
+功能概述：計算運動量指標 Momentum。
+使用範例：
+```
+ta.BBANDS(df.close_d)
+```
+說明：參數說明：<ul>
+<li>close:(numpy array, not None) 日股價收盤價</li>
+<li>roi:(numpy array, not None) 日股價報酬率</li>
+<li>nbdevup:(int,1) 通道頂標準差, </li>
+<li>nbdevdn:(int,1) 通道底標準差, </li>
+<li>timeperiod:(int,20) 樣本區間日數, </li>
 </ul>  
