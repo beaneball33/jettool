@@ -17,38 +17,38 @@ ta.STOCH(df.high_d, df.low_d, df.close_d)
 
 **MACD**  
 功能概述：計算指數平滑移動平均線 Moving Average Convergence / Divergence。
+使用範例：
+```
+ta.MACD(df.close_d)
+```
 說明：參數說明：<ul>
 <li>close:(numpy array, not None) 日股價收盤價</li>
 <li>fastperiod:(int,12) 快線區間日數, </li>
 <li>slowperiod:(int,26) 慢線區間日數</li>
 <li>signalperiod:(int,9) 訊號區間日數</li>
 </ul>  
-使用範例：
-```
-ta.MACD(df.close_d)
-```
+
 
 **RSI**  
 功能概述：計算相對強弱指標 Relative Strength Index。
-說明：參數說明：<ul>
-<li>close:(numpy array, not None) 日股價收盤價</li>
-<li>timeperiod:(int,14) 快線區間日數, </li>
-
-</ul>  
 使用範例：
 ```
 ta.RSI(df.close_d)
 ```
+說明：參數說明：<ul>
+<li>close:(numpy array, not None) 日股價收盤價</li>
+<li>timeperiod:(int,14) 快線區間日數, </li>
+</ul>  
+
 
 **MOM**  
 功能概述：計算運動量指標 Momentum。
-說明：參數說明：<ul>
-<li>close:(numpy array, not None) 日股價收盤價</li>
-<li>roi:(numpy array) 日股價報酬率，若停工此資料，則改以此做為報酬率，可考慮除權息問題。</li>
-<li>timeperiod:(int,10) 快線區間日數, </li>
-
-</ul>  
 使用範例：
 ```
 ta.MOM(df.close_d)
 ```
+說明：參數說明：<ul>
+<li>close:(numpy array, not None) 日股價收盤價</li>
+<li>roi:(numpy array) 日股價報酬率，若停工此資料，則改以此做為報酬率，可考慮除權息問題。</li>
+<li>timeperiod:(int,10) 快線區間日數, </li>
+</ul>  
