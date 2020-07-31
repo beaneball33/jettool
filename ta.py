@@ -117,7 +117,7 @@ def MACD(close=None,data=None,fastperiod = 12,slowperiod = 26,signalperiod = 9):
     df = merge_output(df,coid_date_array,window=timeperiod)
     return df[['macd','macdsignal','macdhist']]
 
-def STOCH(high=None,low=None,close=None,data=None,fastk_period=5, slowk_period=3, slowd_period=3,alpha = 1/3):
+def STOCH(high=None,low=None,close=None,data=None,fastk_period=5, slowk_period=3, slowd_period=3):
 
     if data is None:
         data = {'high_d':high,'low_d':low,'close_d':close}
