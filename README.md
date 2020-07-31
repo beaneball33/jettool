@@ -1,4 +1,4 @@
-tejapi jettool(https://api.tej.com.tw/ "tejapi")
+tejapi (https://api.tej.com.tw/)
 
 # jettool
 
