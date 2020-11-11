@@ -24,11 +24,12 @@ def combine_data(data_list:dict):
     for dataname in data_list:
         if data is None:
             coid_date_array = data_list.get(dataname).index
-
             data = pandas.DataFrame(data_list.get(dataname),columns=[dataname])
             if type(coid_date_array) is pandas.core.indexes.datetimes.DatetimeIndex:
                 data['zdate'] = pandas.DatetimeIndex(coid_date_array)
                 data = data.set_index('zdate')
+            else:
+                print('data series must have DatetimeIndex')
         else:
             data[dataname] = data_list.get(dataname)
     data[date_name] = '2001-01-01'

@@ -85,6 +85,8 @@ class query_base(object):
                                                         
     def manage_marco_dataset(self,table_name):
         table_info = self.table_info.get(table_name)
+        if table_info is None:
+            return False
         coid_table = table_info.get('coid_map')
         coid_cname_column = 'cname'
         coid_map_table = self.macro_mapping_coids.get(table_name)
@@ -115,20 +117,19 @@ class query_base(object):
 
     def get_dataset_name(self,table_name:str) -> str:
         # 產生資料表全名
-
         dataset_name = table_name
-        
         if self.table_info.get(dataset_name) is None:
-            dataset_table = self.tejapi.table_info(dataset_name)
-            if dataset_table.get('error') is not None:
-                return None
-            self.table_info[dataset_name] = self.manage_descrption(dataset_table)
-            """
+            try:
+                dataset_table = self.tejapi.table_info(dataset_name)
+                if dataset_table.get('error') is not None:
+                    return None
+                self.table_info[dataset_name] = self.manage_descrption(dataset_table)
+
             except (RuntimeError, TypeError, NameError):
                 # 代表不是有資料而是對照表，略過
                 self.table_info[dataset_name] = None        
                 print(dataset_name+':table info error')
-            """    
+
         return dataset_name
     def check_table_kind(self,this_table:dict,category:int=1):
         # 開始判斷例外型別 特別是indicator
