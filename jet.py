@@ -30,7 +30,7 @@ class engine(querybase.query_base,
                 raise ImportError(params.numpy_version_error)
 
         self.set_params(params.__dict__,allow_null=True)
-
+        self.accountData , self.activeAccountData = finreport.inital_report()
         if api_key is not None:
             self.set_apikey(api_key)
         #self.load_data()

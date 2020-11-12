@@ -23,7 +23,7 @@ def inital_report(*, code_table:str = 'TWN/AIACC',
         params.accountData['cname'] = params.accountData['cname'].str.replace('(', '（').replace(')', '）')
         params.accountData = params.accountData.sort_values(by=['cname'])
         params.accountData = params.accountData.drop_duplicates(subset=['code'], keep='last')
-
+    return params.accountData , params.activeAccountData
 # 查詢包含特定文字的會計科目名稱
 def get_by_word(keyword:str = '損益', *,
                 active_view:bool = False):

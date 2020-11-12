@@ -15,7 +15,7 @@ class query_base(object):
         for param in new_params:
             if '__' not in param and not callable(new_params.get(param)):   
                 if self.__dict__.get(param) is not None or allow_null is True:
-                    self.__dict__[param] = new_params.get(param)
+                    setattr(self,param,new_params.get(param))
     def get_locals(self):
         context = {k:v for k,v in self.__dict__.items() if '__' not in k and not callable(v)}
         return context              
