@@ -121,12 +121,12 @@ def get_tables_info(*, market:str = 'TWN', table_list:list = {}):
 
 
 # 根據已知的table名稱，查詢 mapping到別的國家的資料表清單
-def get_table_mapping(table_name:str = 'TWN/AIND',*,
+def get_table_mapping(api_key,*,table_name:str = 'TWN/AIND',
                       category_list:list = None):
     market = table_name.split('/')[0]
 
     if category_list is None:
-        category_list = get_category()
+        category_list = get_category(api_key=api_key)
     
     for catefory_index in category_list:
         for tableMap in category_list[catefory_index]['subs']:

@@ -29,8 +29,10 @@ class engine(querybase.query_base,
             int(numpy_version[1])<16):
                 raise ImportError(params.numpy_version_error)
 
-        self.set_params(params.__dict__,allow_null=True)
+        self.set_params(params,allow_null=True)
+
         self.accountData , self.activeAccountData = finreport.inital_report()
+
         if api_key is not None:
             self.set_apikey(api_key)
         #self.load_data()
@@ -132,7 +134,7 @@ class engine(querybase.query_base,
         self.finreport.set_params(self.get_locals())
         self.finreport.inital_report()
 
-        self.set_params(self.finreport.params.__dict__)
+        self.set_params(self.finreport.params)
     def query_report_data(self,available_cname,*,
                           active_view=False):
         # 可以抽象化查詢財報資料，自動整何公告日與財報季別
@@ -152,14 +154,14 @@ class engine(querybase.query_base,
             sample_dates=[self.datastart_date,self.dataend_date],
             active_view=active_view)
 
-        self.set_params(self.finreport.params.__dict__)
+        self.set_params(self.finreport.params)
 
         self.findata_all = findata_all
         print('最大財報資料日期:'+str(self.current_mdate))
     def find_account_name(self,cname='常續性',active_view=False):
         #自動整合查詢財報科目，可以查名稱，若沒有則查分類
     
-        self.finreport.set_params(self.__dict__)
+        self.finreport.set_params(self)
 
         self.finreport.inital_report()   
         if isinstance(cname,str) is True:            
@@ -177,7 +179,7 @@ class engine(querybase.query_base,
                 else:
                     cname_outcome = numpy.append(cname_outcome,
                                                  cname_outcome_temp)
-        self.set_params(self.finreport.params.__dict__)
+        self.set_params(self.finreport.params)
         return cname_outcome
     def query_tradedata(self,*,prc_name={}):
         #產生標準交易日期資料

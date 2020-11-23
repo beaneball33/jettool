@@ -11,11 +11,12 @@ class query_base(object):
         self.tejapi = tejapi
         self.set_params(params.__dict__,allow_null=True)
         
-    def set_params(self,new_params:dict,allow_null=False):
-        for param in new_params:
-            if '__' not in param and not callable(new_params.get(param)):   
+    def set_params(self,new_params,allow_null=False):
+        for param,val in vars(new_params).items():
+            if '__' not in param and not callable(val):   
                 if self.__dict__.get(param) is not None or allow_null is True:
-                    setattr(self,param,new_params.get(param))
+                    setattr(self,param,val)
+
     def get_locals(self):
         context = {k:v for k,v in self.__dict__.items() if '__' not in k and not callable(v)}
         return context              
