@@ -94,9 +94,9 @@ def get_tables(api_key):
     return table_list
 
 # 根據索引目錄的資料表清單構造，回傳 dataframe方便檢視
-def get_tables_info(*, market:str = 'TWN', table_list:list = {}):            
+def get_tables_info(api_key,*, market:str = 'TWN'):            
     df = None
-    
+    table_list = get_tables(api_key)
     # 把所有國別資料表都回傳
     if market is None:            
         for market in table_list:
@@ -176,7 +176,7 @@ def search_column(*, api_key='', market:str = 'TWN', keyword:str = '報酬率',
     current_market
     return match_df
     
-# 取得指定資料庫的完整資料庫欄位表
+# 取得指定資料庫的資料欄位中文名稱，索引值前面會打星號
 def get_table_columns(*, api_key='', table_name:str = 'TWN/AAPRCDA') -> list:
 
     tejapi.ApiConfig.api_key = api_key
@@ -187,4 +187,6 @@ def get_table_columns(*, api_key='', table_name:str = 'TWN/AAPRCDA') -> list:
     for col in columns:
         if columns.get(col).get('name') not in pk:
             columns_name.append(columns.get(col).get('cname'))
+        else:
+            columns_name.append('*'+columns.get(col).get('cname'))
     return columns_name
